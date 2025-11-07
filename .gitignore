@@ -1,0 +1,42 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+bin/
+build/
+dist/
+
+# Vendor directory (если используешь go mod vendor)
+vendor/
+
+# OS-specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# macOS system files
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE/editor
+.idea/
+.vscode/
+*.swp
+
+# Coverage and test outputs
+*.cover
+coverage.out
+
+# Logs
+*.log
