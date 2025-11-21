@@ -33,7 +33,7 @@ func main() {
 ```
 
 ## Docs
-[https://go.microcore.dev](https://go.microcore.dev)
+[https://microcore.dev](https://microcore.dev)
 
 
 ## License
