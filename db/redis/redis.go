@@ -34,6 +34,9 @@ type r struct {
 	mu              sync.RWMutex
 }
 
+// Nil reply returned by Redis when key does not exist.
+const Nil = redis.Nil
+
 var logger = log.New(pkg)
 
 func New(opts ...Option) Interface {

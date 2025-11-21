@@ -11,205 +11,211 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-type Option func(*client)
+type Option func(*config)
 
-// DSN
+// -------------------- Postgres Options --------------------
 
-func WithHost(host string) Option {
-	return func(c *client) {
-		c.dsn.host = host
+// WithPostgresDriverName sets the driver name for the Postgres Dialector
+func WithPostgresDriverName(driverName string) Option {
+	return func(c *config) {
+		c.postgres.DriverName = driverName
 	}
 }
 
-func WithPort(port int) Option {
-	return func(c *client) {
-		c.dsn.port = port
+// WithPostgresDSN sets the Data Source Name (connection string) for Postgres
+func WithPostgresDSN(dsn string) Option {
+	return func(c *config) {
+		c.postgres.DSN = dsn
 	}
 }
 
-func WithUser(user string) Option {
-	return func(c *client) {
-		c.dsn.user = user
+// WithPostgresWithoutQuotingCheck disables column/table quoting checks
+func WithPostgresWithoutQuotingCheck(withoutQuotingCheck bool) Option {
+	return func(c *config) {
+		c.postgres.WithoutQuotingCheck = withoutQuotingCheck
 	}
 }
 
-func WithPassword(password string) Option {
-	return func(c *client) {
-		c.dsn.password = password
+// WithPostgresPreferSimpleProtocol enables Postgres simple protocol instead of extended protocol
+func WithPostgresPreferSimpleProtocol(preferSimpleProtocol bool) Option {
+	return func(c *config) {
+		c.postgres.PreferSimpleProtocol = preferSimpleProtocol
 	}
 }
 
-func WithDb(db string) Option {
-	return func(c *client) {
-		c.dsn.db = db
+// WithPostgresWithoutReturning disables generating RETURNING clause in INSERT/UPDATE/DELETE
+func WithPostgresWithoutReturning(withoutReturning bool) Option {
+	return func(c *config) {
+		c.postgres.WithoutReturning = withoutReturning
 	}
 }
 
-func WithSsl(ssl string) Option {
-	return func(c *client) {
-		c.dsn.ssl = ssl
+// WithPostgresConn sets a custom connection pool for Postgres (e.g., *sql.DB or sqlmock)
+func WithPostgresConn(conn gorm.ConnPool) Option {
+	return func(c *config) {
+		c.postgres.Conn = conn
 	}
 }
 
-func WithSearchPath(searchPath string) Option {
-	return func(c *client) {
-		c.dsn.searchPath = searchPath
+// -------------------- GORM Options --------------------
+
+// WithGormSkipDefaultTransaction disables automatic transactions for single create/update/delete operations
+func WithGormSkipDefaultTransaction(skipDefaultTransaction bool) Option {
+	return func(c *config) {
+		c.gorm.SkipDefaultTransaction = skipDefaultTransaction
 	}
 }
 
-func WithApplicationName(applicationName string) Option {
-	return func(c *client) {
-		c.dsn.applicationName = applicationName
+// WithGormDefaultTransactionTimeout sets the default timeout for transactions
+func WithGormDefaultTransactionTimeout(defaultTransactionTimeout time.Duration) Option {
+	return func(c *config) {
+		c.gorm.DefaultTransactionTimeout = defaultTransactionTimeout
 	}
 }
 
-// Config
-
-// GORM perform single create, update, delete operations in
-// transactions by default to ensure database data integrity
-func WithSkipDefaultTransaction(skipDefaultTransaction bool) Option {
-	return func(c *client) {
-		c.config.SkipDefaultTransaction = skipDefaultTransaction
+// WithGormDefaultContextTimeout sets the default timeout for context in DB operations
+func WithGormDefaultContextTimeout(defaultContextTimeout time.Duration) Option {
+	return func(c *config) {
+		c.gorm.DefaultContextTimeout = defaultContextTimeout
 	}
 }
 
-func WithDefaultTransactionTimeout(defaultTransactionTimeout time.Duration) Option {
-	return func(c *client) {
-		c.config.DefaultTransactionTimeout = defaultTransactionTimeout
+// WithGormNamingStrategy sets a custom naming strategy for tables and columns
+func WithGormNamingStrategy(namingStrategy schema.Namer) Option {
+	return func(c *config) {
+		c.gorm.NamingStrategy = namingStrategy
 	}
 }
 
-func WithDefaultContextTimeout(defaultContextTimeout time.Duration) Option {
-	return func(c *client) {
-		c.config.DefaultContextTimeout = defaultContextTimeout
+// WithGormFullSaveAssociations enables saving all associations when saving a record
+func WithGormFullSaveAssociations(fullSaveAssociations bool) Option {
+	return func(c *config) {
+		c.gorm.FullSaveAssociations = fullSaveAssociations
 	}
 }
 
-// NamingStrategy tables, columns naming strategy
-func WithNamingStrategy(namingStrategy schema.Namer) Option {
-	return func(c *client) {
-		c.config.NamingStrategy = namingStrategy
+// WithGormLogger sets a custom logger for GORM
+func WithGormLogger(logger loggerGorm.Interface) Option {
+	return func(c *config) {
+		c.gorm.Logger = logger
 	}
 }
 
-// FullSaveAssociations full save associations
-func WithFullSaveAssociations(fullSaveAssociations bool) Option {
-	return func(c *client) {
-		c.config.FullSaveAssociations = fullSaveAssociations
+// WithGormNowFunc sets a custom function to generate timestamps for new records
+func WithGormNowFunc(nowFunc func() time.Time) Option {
+	return func(c *config) {
+		c.gorm.NowFunc = nowFunc
 	}
 }
 
-func WithLogger(logger loggerGorm.Interface) Option {
-	return func(c *client) {
-		c.config.Logger = logger
+// WithGormDryRun enables generating SQL statements without executing them
+func WithGormDryRun(dryRun bool) Option {
+	return func(c *config) {
+		c.gorm.DryRun = dryRun
 	}
 }
 
-func WithNowFunc(nowFunc func() time.Time) Option {
-	return func(c *client) {
-		c.config.NowFunc = nowFunc
+// WithGormPrepareStmt enables caching prepared statements for faster execution
+func WithGormPrepareStmt(prepareStmt bool) Option {
+	return func(c *config) {
+		c.gorm.PrepareStmt = prepareStmt
 	}
 }
 
-// DryRun generate sql without execute
-func WithDryRun(dryRun bool) Option {
-	return func(c *client) {
-		c.config.DryRun = dryRun
+// WithGormPrepareStmtMaxSize sets the maximum size of the prepared statement cache
+func WithGormPrepareStmtMaxSize(prepareStmtMaxSize int) Option {
+	return func(c *config) {
+		c.gorm.PrepareStmtMaxSize = prepareStmtMaxSize
 	}
 }
 
-// PrepareStmt executes the given query in cached statement
-func WithPrepareStmt(prepareStmt bool) Option {
-	return func(c *client) {
-		c.config.PrepareStmt = prepareStmt
+// WithGormPrepareStmtTTL sets the TTL (time-to-live) for prepared statements in the cache
+func WithGormPrepareStmtTTL(prepareStmtTTL time.Duration) Option {
+	return func(c *config) {
+		c.gorm.PrepareStmtTTL = prepareStmtTTL
 	}
 }
 
-// PrepareStmt cache support LRU expired,
-// default maxsize=int64 Max value and ttl=1h
-func WithPrepareStmtMaxSize(prepareStmtMaxSize int) Option {
-	return func(c *client) {
-		c.config.PrepareStmtMaxSize = prepareStmtMaxSize
-	}
-}
-func WithPrepareStmtTTL(prepareStmtTTL time.Duration) Option {
-	return func(c *client) {
-		c.config.PrepareStmtTTL = prepareStmtTTL
+// WithGormDisableAutomaticPing disables automatic database ping on initialization
+func WithGormDisableAutomaticPing(disableAutomaticPing bool) Option {
+	return func(c *config) {
+		c.gorm.DisableAutomaticPing = disableAutomaticPing
 	}
 }
 
-func WithDisableAutomaticPing(disableAutomaticPing bool) Option {
-	return func(c *client) {
-		c.config.DisableAutomaticPing = disableAutomaticPing
+// WithGormDisableForeignKeyConstraintWhenMigrating disables creating foreign key constraints during migrations
+func WithGormDisableForeignKeyConstraintWhenMigrating(disableForeignKeyConstraintWhenMigrating bool) Option {
+	return func(c *config) {
+		c.gorm.DisableForeignKeyConstraintWhenMigrating = disableForeignKeyConstraintWhenMigrating
 	}
 }
 
-func WithDisableForeignKeyConstraintWhenMigrating(disableForeignKeyConstraintWhenMigrating bool) Option {
-	return func(c *client) {
-		c.config.DisableForeignKeyConstraintWhenMigrating = disableForeignKeyConstraintWhenMigrating
+// WithGormIgnoreRelationshipsWhenMigrating disables saving relationships when performing migrations
+func WithGormIgnoreRelationshipsWhenMigrating(ignoreRelationshipsWhenMigrating bool) Option {
+	return func(c *config) {
+		c.gorm.IgnoreRelationshipsWhenMigrating = ignoreRelationshipsWhenMigrating
 	}
 }
 
-func WithIgnoreRelationshipsWhenMigrating(ignoreRelationshipsWhenMigrating bool) Option {
-	return func(c *client) {
-		c.config.IgnoreRelationshipsWhenMigrating = ignoreRelationshipsWhenMigrating
+// WithGormDisableNestedTransaction disables nested transactions
+func WithGormDisableNestedTransaction(disableNestedTransaction bool) Option {
+	return func(c *config) {
+		c.gorm.DisableNestedTransaction = disableNestedTransaction
 	}
 }
 
-func WithDisableNestedTransaction(disableNestedTransaction bool) Option {
-	return func(c *client) {
-		c.config.DisableNestedTransaction = disableNestedTransaction
+// WithGormAllowGlobalUpdate allows updates/deletes without WHERE conditions
+func WithGormAllowGlobalUpdate(allowGlobalUpdate bool) Option {
+	return func(c *config) {
+		c.gorm.AllowGlobalUpdate = allowGlobalUpdate
 	}
 }
 
-func WithAllowGlobalUpdate(allowGlobalUpdate bool) Option {
-	return func(c *client) {
-		c.config.AllowGlobalUpdate = allowGlobalUpdate
+// WithGormQueryFields enables querying all fields of a table
+func WithGormQueryFields(queryFields bool) Option {
+	return func(c *config) {
+		c.gorm.QueryFields = queryFields
 	}
 }
 
-// QueryFields executes the SQL query with all fields of the table
-func WithQueryFields(queryFields bool) Option {
-	return func(c *client) {
-		c.config.QueryFields = queryFields
+// WithGormCreateBatchSize sets default batch size for bulk inserts
+func WithGormCreateBatchSize(createBatchSize int) Option {
+	return func(c *config) {
+		c.gorm.CreateBatchSize = createBatchSize
 	}
 }
 
-// CreateBatchSize default create batch size
-func WithCreateBatchSize(createBatchSize int) Option {
-	return func(c *client) {
-		c.config.CreateBatchSize = createBatchSize
+// WithGormTranslateError enables translating database errors using Dialector
+func WithGormTranslateError(translateError bool) Option {
+	return func(c *config) {
+		c.gorm.TranslateError = translateError
 	}
 }
 
-// TranslateError enabling error translation
-func WithTranslateError(translateError bool) Option {
-	return func(c *client) {
-		c.config.TranslateError = translateError
+// WithGormPropagateUnscoped propagates Unscoped mode to nested statements
+func WithGormPropagateUnscoped(propagateUnscoped bool) Option {
+	return func(c *config) {
+		c.gorm.PropagateUnscoped = propagateUnscoped
 	}
 }
 
-// PropagateUnscoped propagate Unscoped to every other nested statement
-func WithPropagateUnscoped(propagateUnscoped bool) Option {
-	return func(c *client) {
-		c.config.PropagateUnscoped = propagateUnscoped
+// WithGormClauseBuilders sets custom clause builders for SQL generation
+func WithGormClauseBuilders(clauseBuilders map[string]clause.ClauseBuilder) Option {
+	return func(c *config) {
+		c.gorm.ClauseBuilders = clauseBuilders
 	}
 }
 
-func WithClauseBuilders(clauseBuilders map[string]clause.ClauseBuilder) Option {
-	return func(c *client) {
-		c.config.ClauseBuilders = clauseBuilders
+// WithGormConnPool sets a custom connection pool for GORM operations
+func WithGormConnPool(connPool gorm.ConnPool) Option {
+	return func(c *config) {
+		c.gorm.ConnPool = connPool
 	}
 }
 
-func WithConnPool(connPool gorm.ConnPool) Option {
-	return func(c *client) {
-		c.config.ConnPool = connPool
-	}
-}
-
-func WithPlugins(plugins map[string]gorm.Plugin) Option {
-	return func(c *client) {
-		c.config.Plugins = plugins
+// WithGormPlugins sets custom GORM plugins
+func WithGormPlugins(plugins map[string]gorm.Plugin) Option {
+	return func(c *config) {
+		c.gorm.Plugins = plugins
 	}
 }

@@ -1,7 +1,6 @@
 package client // import "go.microcore.dev/framework/db/postgres/client"
 
 import (
-	"fmt"
 	"log/slog"
 
 	_ "go.microcore.dev/framework"
@@ -11,58 +10,26 @@ import (
 	"gorm.io/gorm"
 )
 
-type client struct {
-	dsn    *dsn
-	config *gorm.Config
-}
-
-type dsn struct {
-	host            string
-	port            int
-	user            string
-	password        string
-	db              string
-	ssl             string
-	searchPath      string
-	applicationName string
+type config struct {
+	postgres postgres.Config
+	gorm     *gorm.Config
 }
 
 var logger = log.New(pkg)
 
 func New(opts ...Option) *gorm.DB {
-	client := &client{
-		dsn: &dsn{
-			host:            defaultDsnHost,
-			port:            defaultDsnPort,
-			user:            defaultDsnUser,
-			password:        defaultDsnPassword,
-			db:              defaultDsnDb,
-			ssl:             defaultDsnSsl,
-			searchPath:      defaultDsnSearchPath,
-			applicationName: defaultDsnApplicationName,
-		},
-		config: &gorm.Config{},
+	config := &config{
+		postgres: postgres.Config{},
+		gorm:     &gorm.Config{},
 	}
 
 	for _, opt := range opts {
-		opt(client)
+		opt(config)
 	}
 
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s search_path=%s application_name=%s",
-		client.dsn.host,
-		client.dsn.port,
-		client.dsn.user,
-		client.dsn.password,
-		client.dsn.db,
-		client.dsn.ssl,
-		client.dsn.searchPath,
-		client.dsn.applicationName,
-	)
-
-	c, err := gorm.Open(
-		postgres.Open(dsn),
-		client.config,
+	client, err := gorm.Open(
+		postgres.New(config.postgres),
+		config.gorm,
 	)
 	if err != nil {
 		logger.Error(
@@ -72,36 +39,42 @@ func New(opts ...Option) *gorm.DB {
 		panic(err)
 	}
 
-	logger.Info(
+	logger.Debug(
 		"client has been successfully created",
-		slog.Group("dsn",
-			slog.String("host", client.dsn.host),
-			slog.Int("port", client.dsn.port),
-			slog.String("db", client.dsn.db),
-			slog.String("ssl", client.dsn.ssl),
-			slog.String("searchPath", client.dsn.searchPath),
-			slog.String("applicationName", client.dsn.applicationName),
+		slog.Group("postgres",
+			slog.String("driver_name", config.postgres.DriverName),
+			slog.String("dsn", config.postgres.DSN),
+			slog.Bool("without_quoting_check", config.postgres.WithoutQuotingCheck),
+			slog.Bool("prefer_simple_protocol", config.postgres.PreferSimpleProtocol),
+			slog.Bool("without_returning", config.postgres.WithoutReturning),
+			slog.Any("conn", config.postgres.Conn),
 		),
-		slog.Group("config",
-			slog.Bool("skip_default_transaction", client.config.SkipDefaultTransaction),
-			slog.Duration("default_transaction_timeout", client.config.DefaultTransactionTimeout),
-			slog.Duration("default_context_timeout", client.config.DefaultContextTimeout),
-			slog.Bool("full_save_associations", client.config.FullSaveAssociations),
-			slog.Bool("dry_run", client.config.DryRun),
-			slog.Bool("prepare_stmt", client.config.PrepareStmt),
-			slog.Int("prepare_stmt_max_size", client.config.PrepareStmtMaxSize),
-			slog.Duration("prepare_stmt_ttl", client.config.PrepareStmtTTL),
-			slog.Bool("disable_automatic_ping", client.config.DisableAutomaticPing),
-			slog.Bool("disable_foreign_key_constraint_when_migrating", client.config.DisableForeignKeyConstraintWhenMigrating),
-			slog.Bool("ignore_relationships_when_migrating", client.config.IgnoreRelationshipsWhenMigrating),
-			slog.Bool("disable_nested_transaction", client.config.DisableNestedTransaction),
-			slog.Bool("allow_global_update", client.config.AllowGlobalUpdate),
-			slog.Bool("query_fields", client.config.QueryFields),
-			slog.Int("create_batch_size", client.config.CreateBatchSize),
-			slog.Bool("translate_error", client.config.TranslateError),
-			slog.Bool("propagate_unscoped", client.config.PropagateUnscoped),
+		slog.Group("gorm",
+			slog.Bool("skip_default_transaction", config.gorm.SkipDefaultTransaction),
+			slog.Duration("default_transaction_timeout", config.gorm.DefaultTransactionTimeout),
+			slog.Duration("default_context_timeout", config.gorm.DefaultContextTimeout),
+			slog.Any("naming_strategy", config.gorm.NamingStrategy),
+			slog.Bool("full_save_associations", config.gorm.FullSaveAssociations),
+			slog.Any("logger", config.gorm.Logger),
+			slog.Any("now_func", config.gorm.NowFunc),
+			slog.Bool("dry_run", config.gorm.DryRun),
+			slog.Bool("prepare_stmt", config.gorm.PrepareStmt),
+			slog.Int("prepare_stmt_max_size", config.gorm.PrepareStmtMaxSize),
+			slog.Duration("prepare_stmt_ttl", config.gorm.PrepareStmtTTL),
+			slog.Bool("disable_automatic_ping", config.gorm.DisableAutomaticPing),
+			slog.Bool("disable_foreign_key_constraint_when_migrating", config.gorm.DisableForeignKeyConstraintWhenMigrating),
+			slog.Bool("ignore_relationships_when_migrating", config.gorm.IgnoreRelationshipsWhenMigrating),
+			slog.Bool("disable_nested_transaction", config.gorm.DisableNestedTransaction),
+			slog.Bool("allow_global_update", config.gorm.AllowGlobalUpdate),
+			slog.Bool("query_fields", config.gorm.QueryFields),
+			slog.Int("create_batch_size", config.gorm.CreateBatchSize),
+			slog.Bool("translate_error", config.gorm.TranslateError),
+			slog.Bool("propagate_unscoped", config.gorm.PropagateUnscoped),
+			slog.Any("clause_builders", config.gorm.ClauseBuilders),
+			slog.Any("conn_pool", config.gorm.ConnPool),
+			slog.Any("plugins", config.gorm.Plugins),
 		),
 	)
 
-	return c
+	return client
 }

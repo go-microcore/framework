@@ -10,7 +10,5 @@ const (
 	defaultNetwork    = "tcp"
 	defaultAddr       = "localhost:6379"
 	defaultClientName = "microcore"
-	defaultUsername   = ""
-	defaultPassword   = ""
 	defaultDb         = 0
 )
