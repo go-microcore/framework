@@ -279,3 +279,23 @@ func (c *RequestContext) GetBearerToken() (string, error) {
 func (c *RequestContext) GetContext() context.Context {
 	return extractRequestContext(c.RequestCtx)
 }
+
+type fasthttpRequestCtxHeaderCarrier struct {
+	ctx *fasthttp.RequestCtx
+}
+
+func (c fasthttpRequestCtxHeaderCarrier) Get(key string) string {
+	return string(c.ctx.Request.Header.Peek(key))
+}
+
+func (c fasthttpRequestCtxHeaderCarrier) Set(key, value string) {
+	c.ctx.Request.Header.Set(key, value)
+}
+
+func (c fasthttpRequestCtxHeaderCarrier) Keys() []string {
+	keys := []string{}
+	c.ctx.Request.Header.VisitAll(func(k, v []byte) {
+		keys = append(keys, string(k))
+	})
+	return keys
+}
