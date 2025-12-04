@@ -28,12 +28,17 @@ func New(opts ...Option) *router.Router {
 		opt(router)
 	}
 
-	logger.Info(
+	logger.Debug(
 		"router has been successfully created",
 		slog.Bool("save_matched_route_path", router.SaveMatchedRoutePath),
 		slog.Bool("redirect_trailing_slash", router.RedirectTrailingSlash),
 		slog.Bool("redirect_fixed_path", router.RedirectFixedPath),
 		slog.Bool("handle_method_not_allowed", router.HandleMethodNotAllowed),
+		slog.Bool("handle_options", router.HandleOPTIONS),
+		slog.Any("global_options", router.GlobalOPTIONS),
+		slog.Any("not_found", router.NotFound),
+		slog.Any("method_not_allowed", router.MethodNotAllowed),
+		slog.Any("panic_handler", router.PanicHandler),
 	)
 
 	return router

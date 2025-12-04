@@ -140,15 +140,15 @@ func WithRoutePath(path string) RouteOption {
 	}
 }
 
-func WithRouteHandler(handler func(*RequestContext, context.Context)) RouteOption {
+func WithRouteHandler(handler func(context.Context, *RequestContext)) RouteOption {
 	return func(r *route) {
 		r.handler = func(c *RequestContext) {
-			handler(c, extractRequestContext(c.RequestCtx))
+			handler(extractRequestContext(c.RequestCtx), c)
 		}
 	}
 }
 
-func WithRouteBodyParserHandler[T any](handler func(*RequestContext, context.Context, *T)) RouteOption {
+func WithRouteBodyParserHandler[T any](handler func(context.Context, *RequestContext, *T)) RouteOption {
 	return func(r *route) {
 		r.handler = func(c *RequestContext) {
 			var body T
@@ -164,7 +164,7 @@ func WithRouteBodyParserHandler[T any](handler func(*RequestContext, context.Con
 				return
 			}
 
-			handler(c, extractRequestContext(c.RequestCtx), &body)
+			handler(extractRequestContext(c.RequestCtx), c, &body)
 		}
 	}
 }

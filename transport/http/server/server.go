@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"strconv"
 	"time"
 
 	_ "go.microcore.dev/framework"
@@ -16,9 +15,7 @@ import (
 	"go.microcore.dev/framework/transport/http/server/listener"
 	"go.microcore.dev/framework/transport/http/server/router"
 
-	"github.com/aquasecurity/table"
 	fasthttpRouter "github.com/fasthttp/router"
-	"github.com/liamg/tml"
 	fastHttpSwagger "github.com/swaggo/fasthttp-swagger"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/pprofhandler"
@@ -28,7 +25,7 @@ type Interface interface {
 	SetListener(listener net.Listener) Interface
 	SetCore(core *fasthttp.Server) Interface
 	SetRouter(router *fasthttpRouter.Router) Interface
-	UseTelemetry(telemetry telemetry.Interface) Interface
+	SetTelemetryManager(telemetry telemetry.Interface) Interface
 	EnableTLS(tls *TLS) Interface
 	AddMiddleware(MiddlewareHandler) Interface
 	AddRoute(opts ...RouteOption) Interface
@@ -146,7 +143,7 @@ func (s *server) SetRouter(router *fasthttpRouter.Router) Interface {
 	return s
 }
 
-func (s *server) UseTelemetry(telemetry telemetry.Interface) Interface {
+func (s *server) SetTelemetryManager(telemetry telemetry.Interface) Interface {
 	s.telemetry = telemetry
 	return s
 }
@@ -257,42 +254,14 @@ func (s *server) Listen() <-chan error {
 		port := addr.Port
 		network := addr.Network()
 
-		strategies := map[bool]struct {
-			mode  string
-			tls   string
-			serve func() error
-		}{
-			true: {
-				mode: "network",
-				tls:  "<red>Disable</red>",
-				serve: func() error {
-					return s.core.Serve(s.listener)
-				},
+		serve := map[bool]func() error{
+			true: func() error {
+				return s.core.Serve(s.listener)
 			},
-			false: {
-				mode: "network (TLS)",
-				tls:  "<green>Enable</green>",
-				serve: func() error {
-					return s.core.ServeTLS(s.listener, s.tls.Cert, s.tls.Key)
-				},
+			false: func() error {
+				return s.core.ServeTLS(s.listener, s.tls.Cert, s.tls.Key)
 			},
 		}
-
-		strategy := strategies[s.tls == nil]
-
-		table := table.New(os.Stdout)
-		table.SetHeaders("HTTP server")
-		table.SetHeaderColSpans(0, 2)
-		table.AddRow("Network", network)
-		table.AddRow("Host", host)
-		table.AddRow("Port", strconv.Itoa(port))
-		table.AddRow("TLS", tml.Sprintf(strategy.tls))
-		if s.telemetry == nil {
-			table.AddRow("Telemetry", tml.Sprintf("<red>Disable</red>"))
-		} else {
-			table.AddRow("Telemetry", tml.Sprintf("<green>Enable</green>"))
-		}
-		table.Render()
 
 		logger.Info(
 			"started",
@@ -303,7 +272,7 @@ func (s *server) Listen() <-chan error {
 			slog.Bool("telemetry", s.telemetry != nil),
 		)
 
-		if err := strategy.serve(); err != nil {
+		if err := serve[s.tls == nil](); err != nil {
 			exit <- err
 		}
 

@@ -36,12 +36,21 @@ func New(opts ...Option) *fasthttp.Server {
 		opt(core)
 	}
 
-	logger.Info(
+	logger.Debug(
 		"core has been successfully created",
 		slog.String("name", core.Name),
 		slog.Int("concurrency", core.Concurrency),
 		slog.Int("read_buffer_size", core.ReadBufferSize),
 		slog.Int("write_buffer_size", core.WriteBufferSize),
+		slog.Duration("read_timeout", core.ReadTimeout),
+		slog.Duration("write_timeout", core.WriteTimeout),
+		slog.Duration("idle_timeout", core.IdleTimeout),
+		slog.Int("max_conns_per_ip", core.MaxConnsPerIP),
+		slog.Int("max_requests_per_conn", core.MaxRequestsPerConn),
+		slog.Int("max_request_body_size", core.MaxRequestBodySize),
+		slog.Bool("disable_keepalive", core.DisableKeepalive),
+		slog.Bool("tcp_keepalive", core.TCPKeepalive),
+		slog.Bool("log_all_errors", core.LogAllErrors),
 	)
 
 	return core

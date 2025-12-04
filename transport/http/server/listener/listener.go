@@ -39,7 +39,7 @@ func New(opts ...Option) net.Listener {
 		panic(err)
 	}
 
-	logger.Info(
+	logger.Debug(
 		"listener has been successfully created",
 		slog.String("network", settings.network),
 		slog.String("hostname", settings.hostname),

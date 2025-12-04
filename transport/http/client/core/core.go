@@ -31,9 +31,31 @@ func New(opts ...Option) *fasthttp.Client {
 		opt(core)
 	}
 
-	logger.Info(
-		"created",
+	logger.Debug(
+		"core has been successfully created",
+		slog.Any("transport", core.Transport),
+		slog.Any("dial_timeout", core.DialTimeout),
+		slog.Any("dial", core.Dial),
+		slog.Any("tls_config", core.TLSConfig),
+		slog.Any("retry_if_err", core.RetryIfErr),
+		slog.Any("configure_client", core.ConfigureClient),
 		slog.String("name", core.Name),
+		slog.Int("max_conns_per_host", core.MaxConnsPerHost),
+		slog.Duration("max_idle_conn_duration", core.MaxIdleConnDuration),
+		slog.Duration("max_conn_duration", core.MaxConnDuration),
+		slog.Int("max_idemponent_call_attempts", core.MaxIdemponentCallAttempts),
+		slog.Int("read_buffer_size", core.ReadBufferSize),
+		slog.Int("write_buffer_size", core.WriteBufferSize),
+		slog.Duration("read_timeout", core.ReadTimeout),
+		slog.Duration("write_timeout", core.WriteTimeout),
+		slog.Int("max_response_body_size", core.MaxResponseBodySize),
+		slog.Duration("max_conn_wait_timeout", core.MaxConnWaitTimeout),
+		slog.Any("conn_pool_strategy", core.ConnPoolStrategy),
+		slog.Bool("no_default_user_agent_header", core.NoDefaultUserAgentHeader),
+		slog.Bool("dial_dual_stack", core.DialDualStack),
+		slog.Bool("disable_header_names_normalizing", core.DisableHeaderNamesNormalizing),
+		slog.Bool("disable_path_normalizing", core.DisablePathNormalizing),
+		slog.Bool("stream_response_body", core.StreamResponseBody),
 	)
 
 	return core
