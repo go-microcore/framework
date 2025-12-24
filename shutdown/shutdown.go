@@ -1,6 +1,7 @@
 package shutdown // import "go.microcore.dev/framework/shutdown"
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,32 +12,37 @@ import (
 	"go.microcore.dev/framework/log"
 )
 
+type (
+	shutdown struct {
+		signals  []os.Signal
+		done     chan string
+		manual   chan string
+		catch    chan os.Signal
+		handlers []Handler
+		once     sync.Once
+		mu       sync.Mutex
+	}
+
+	Handler func(ctx context.Context, reason string) error
+)
+
 var (
 	s = &shutdown{
 		signals:  shutdownSignals,
-		done:     make(chan error, 1),
-		manual:   make(chan error, 1),
-		catch:    make(chan os.Signal, 2),
-		handlers: []func(os.Signal) error{},
+		done:     make(chan string, 1),
+		manual:   make(chan string, 1),
+		catch:    make(chan os.Signal, 1),
+		handlers: []Handler{},
 	}
+	
 	logger = log.New(pkg)
 )
-
-type shutdown struct {
-	signals  []os.Signal
-	done     chan error
-	manual   chan error
-	catch    chan os.Signal
-	handlers []func(os.Signal) error
-	once     sync.Once
-	mu       sync.Mutex
-}
 
 func init() {
 	go subscribe()
 }
 
-func AddHandler(handler func(os.Signal) error) {
+func AddHandler(handler Handler) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.handlers = append(s.handlers, handler)
@@ -46,43 +52,46 @@ func AddHandler(handler func(os.Signal) error) {
 	)
 }
 
-func Wait() error {
-    return <-s.done
+func Wait() string {
+	return <-s.done
 }
 
-func Shutdown(err error) {
-	s.manual <- err
+func Shutdown(reason string) {
+	s.manual <- reason
 }
 
 func subscribe() {
-	logger.Info("subscribe")
+	logger.Debug("subscribe")
+
 	signal.Notify(s.catch, s.signals...)
 	defer signal.Stop(s.catch)
+
+	var reason string
+
 	select {
-	case err := <-s.manual:
-		logger.Info(
-			"manual",
-			slog.String("reason", err.Error()),
-		)
-		handlers(nil)
-		done(err)
-		return
+	case reason = <-s.manual:
 	case sig := <-s.catch:
-		logger.Info(
-			"signal",
-			slog.String("reason", sig.String()),
-		)
-		handlers(sig)
-		done(fmt.Errorf("syscall (%s)", sig))
-		return
+		reason = fmt.Sprintf("syscall (%s)", sig.String())
 	}
+
+	logger.Info(
+		"shutdown",
+		slog.String("reason", reason),
+	)
+
+	handlers(reason)
+	done(reason)
 }
 
-func handlers(sig os.Signal) {
+func handlers(reason string) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
+	defer cancel()
+
 	var wg sync.WaitGroup
 	wg.Add(len(s.handlers))
+
 	for _, fn := range s.handlers {
-		go func(fn func(os.Signal) error) {
+		go func(fn Handler) {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
@@ -91,7 +100,7 @@ func handlers(sig os.Signal) {
 					)
 				}
 			}()
-			if err := fn(sig); err != nil {
+			if err := fn(ctx, reason); err != nil {
 				logger.Error(
 					"handler error",
 					slog.Any("error", err),
@@ -99,13 +108,24 @@ func handlers(sig os.Signal) {
 			}
 		}(fn)
 	}
-	wg.Wait()
-	logger.Info("all shutdown handlers completed")
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		logger.Warn("shutdown handlers timed out")
+	case <-done:
+		logger.Debug("all shutdown handlers completed")
+	}
 }
 
-func done(err error) {
+func done(reason string) {
 	s.once.Do(func() {
-		s.done <- err
+		s.done <- reason
 		close(s.done)
 		close(s.manual)
 	})

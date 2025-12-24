@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -41,7 +40,6 @@ type (
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
 		Shutdown(ctx context.Context, reason string) error
-		ShutdownHandler(sig os.Signal) error
 	}
 
 	Message                            = kafka.Message
@@ -97,8 +95,8 @@ func New(opts ...Option) Manager {
 	}
 
 	if k.shutdownHandler {
-		shutdown.AddHandler(k.ShutdownHandler)
-		logger.Info("shutdown handler has been successfully registered")
+		shutdown.AddHandler(k.Shutdown)
+		logger.Debug("shutdown handler has been successfully registered")
 	}
 
 	logger.Info(
@@ -293,8 +291,11 @@ func (k *k) GetShutdownHandler() bool {
 }
 
 func (k *k) Shutdown(ctx context.Context, reason string) error {
-	logger.Info(
-		"shutting down",
+	ctx, cancel := context.WithTimeout(ctx, k.shutdownTimeout)
+	defer cancel()
+
+	logger.Debug(
+		"shutdown",
 		slog.String("reason", reason),
 	)
 
@@ -313,24 +314,13 @@ func (k *k) Shutdown(ctx context.Context, reason string) error {
 		k.wg.Wait()
 		ch <- nil
 	}()
+	
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case err := <-ch:
 		return err
 	}
-}
-
-func (k *k) ShutdownHandler(sig os.Signal) error {
-	ctx, cancel := context.WithTimeout(context.Background(), k.shutdownTimeout)
-	defer cancel()
-
-	reason := "unknown"
-	if sig != nil {
-		reason = sig.String()
-	}
-
-	return k.Shutdown(ctx, reason)
 }
 
 func (f headerCarrier) Get(key string) string {

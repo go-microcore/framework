@@ -3,7 +3,6 @@ package postgres // import "go.microcore.dev/framework/db/postgres"
 import (
 	"context"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
@@ -19,23 +18,24 @@ import (
 	"github.com/go-gormigrate/gormigrate/v2"
 )
 
-type Manager interface {
-	Client() *gorm.DB
-	SetClient(client *gorm.DB) Manager
-	SetTelemetryManager(telemetry telemetry.Manager) error
-	Migrate(migrations []*gormigrate.Migration, options *gormigrate.Options) error
-	GetShutdownTimeout() time.Duration
-	GetShutdownHandler() bool
-	Shutdown(ctx context.Context, reason string) error
-	ShutdownHandler(sig os.Signal) error
-}
+type (
+	Manager interface {
+		Client() *gorm.DB
+		SetClient(client *gorm.DB) Manager
+		SetTelemetryManager(telemetry telemetry.Manager) error
+		Migrate(migrations []*gormigrate.Migration, options *gormigrate.Options) error
+		GetShutdownTimeout() time.Duration
+		GetShutdownHandler() bool
+		Shutdown(ctx context.Context, reason string) error
+	}
 
-type p struct {
-	client          *gorm.DB
-	shutdownTimeout time.Duration
-	shutdownHandler bool
-	mu              sync.RWMutex
-}
+	p struct {
+		client          *gorm.DB
+		shutdownTimeout time.Duration
+		shutdownHandler bool
+		mu              sync.RWMutex
+	}
+)
 
 var logger = log.New(pkg)
 
@@ -54,8 +54,8 @@ func New(opts ...Option) Manager {
 	}
 
 	if p.shutdownHandler {
-		shutdown.AddHandler(p.ShutdownHandler)
-		logger.Info("shutdown handler has been successfully registered")
+		shutdown.AddHandler(p.Shutdown)
+		logger.Debug("shutdown handler has been successfully registered")
 	}
 
 	logger.Info(
@@ -126,8 +126,11 @@ func (p *p) GetShutdownHandler() bool {
 }
 
 func (p *p) Shutdown(ctx context.Context, reason string) error {
-	logger.Info(
-		"shutting down",
+	ctx, cancel := context.WithTimeout(ctx, p.shutdownTimeout)
+	defer cancel()
+
+	logger.Debug(
+		"shutdown",
 		slog.String("reason", reason),
 	)
 
@@ -149,16 +152,4 @@ func (p *p) Shutdown(ctx context.Context, reason string) error {
 	case err := <-ch:
 		return err
 	}
-}
-
-func (p *p) ShutdownHandler(sig os.Signal) error {
-	ctx, cancel := context.WithTimeout(context.Background(), p.shutdownTimeout)
-	defer cancel()
-
-	reason := "unknown"
-	if sig != nil {
-		reason = sig.String()
-	}
-
-	return p.Shutdown(ctx, reason)
 }

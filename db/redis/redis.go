@@ -3,7 +3,6 @@ package redis // import "go.microcore.dev/framework/db/redis"
 import (
 	"context"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
@@ -17,22 +16,23 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type Manager interface {
-	Client() *redis.Client
-	SetClient(client *redis.Client) Manager
-	SetTelemetryManager(telemetry telemetry.Manager) error
-	GetShutdownTimeout() time.Duration
-	GetShutdownHandler() bool
-	Shutdown(ctx context.Context, reason string) error
-	ShutdownHandler(sig os.Signal) error
-}
+type (
+	Manager interface {
+		Client() *redis.Client
+		SetClient(client *redis.Client) Manager
+		SetTelemetryManager(telemetry telemetry.Manager) error
+		GetShutdownTimeout() time.Duration
+		GetShutdownHandler() bool
+		Shutdown(ctx context.Context, reason string) error
+	}
 
-type r struct {
-	client          *redis.Client
-	shutdownTimeout time.Duration
-	shutdownHandler bool
-	mu              sync.RWMutex
-}
+	r struct {
+		client          *redis.Client
+		shutdownTimeout time.Duration
+		shutdownHandler bool
+		mu              sync.RWMutex
+	}
+)
 
 // Nil reply returned by Redis when key does not exist.
 const Nil = redis.Nil
@@ -54,8 +54,8 @@ func New(opts ...Option) Manager {
 	}
 
 	if r.shutdownHandler {
-		shutdown.AddHandler(r.ShutdownHandler)
-		logger.Info("shutdown handler has been successfully registered")
+		shutdown.AddHandler(r.Shutdown)
+		logger.Debug("shutdown handler has been successfully registered")
 	}
 
 	logger.Info(
@@ -112,8 +112,11 @@ func (r *r) GetShutdownHandler() bool {
 }
 
 func (r *r) Shutdown(ctx context.Context, reason string) error {
-	logger.Info(
-		"shutting down",
+	ctx, cancel := context.WithTimeout(ctx, r.shutdownTimeout)
+	defer cancel()
+
+	logger.Debug(
+		"shutdown",
 		slog.String("reason", reason),
 	)
 
@@ -128,16 +131,4 @@ func (r *r) Shutdown(ctx context.Context, reason string) error {
 	case err := <-ch:
 		return err
 	}
-}
-
-func (r *r) ShutdownHandler(sig os.Signal) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.shutdownTimeout)
-	defer cancel()
-
-	reason := "unknown"
-	if sig != nil {
-		reason = sig.String()
-	}
-
-	return r.Shutdown(ctx, reason)
 }

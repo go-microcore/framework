@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -37,31 +36,32 @@ import (
 	"go.microcore.dev/framework/shutdown"
 )
 
-type Manager interface {
-	GetTraceProvider() *traceSdk.TracerProvider
-	GetMetricProvider() *metricSdk.MeterProvider
-	GetLogProvider() *logSdk.LoggerProvider
-	GetTracer() otelTrace.Tracer
-	GetMeter() otelMetric.Meter
-	GetLogger() otelLog.Logger
-	GetPropagator() propagation.TextMapPropagator
-	GetMetricsHttpHandler() http.Handler
-	GetShutdownTimeout() time.Duration
-	GetShutdownHandler() bool
-	ForceFlush(ctx context.Context, reason string) error
-	Shutdown(ctx context.Context, reason string) error
-	ShutdownHandler(sig os.Signal) error
-}
+type (
+	Manager interface {
+		GetTraceProvider() *traceSdk.TracerProvider
+		GetMetricProvider() *metricSdk.MeterProvider
+		GetLogProvider() *logSdk.LoggerProvider
+		GetTracer() otelTrace.Tracer
+		GetMeter() otelMetric.Meter
+		GetLogger() otelLog.Logger
+		GetPropagator() propagation.TextMapPropagator
+		GetMetricsHttpHandler() http.Handler
+		GetShutdownTimeout() time.Duration
+		GetShutdownHandler() bool
+		ForceFlush(ctx context.Context, reason string) error
+		Shutdown(ctx context.Context, reason string) error
+	}
 
-type t struct {
-	traceProvider   *traceSdk.TracerProvider
-	metricProvider  *metricSdk.MeterProvider
-	logProvider     *logSdk.LoggerProvider
-	propagator      propagation.TextMapPropagator
-	shutdownTimeout time.Duration
-	shutdownHandler bool
-	setLogProvider  bool
-}
+	t struct {
+		traceProvider   *traceSdk.TracerProvider
+		metricProvider  *metricSdk.MeterProvider
+		logProvider     *logSdk.LoggerProvider
+		propagator      propagation.TextMapPropagator
+		shutdownTimeout time.Duration
+		shutdownHandler bool
+		setLogProvider  bool
+	}
+)
 
 var logger = log.New(pkg)
 
@@ -90,8 +90,8 @@ func New(opts ...Option) Manager {
 	}
 
 	if t.shutdownHandler {
-		shutdown.AddHandler(t.ShutdownHandler)
-		logger.Info("shutdown handler has been successfully registered")
+		shutdown.AddHandler(t.Shutdown)
+		logger.Debug("shutdown handler has been successfully registered")
 	}
 
 	if t.setLogProvider {
@@ -245,8 +245,11 @@ func (t *t) ForceFlush(ctx context.Context, reason string) error {
 }
 
 func (t *t) Shutdown(ctx context.Context, reason string) error {
-	logger.Info(
-		"shutting down",
+	ctx, cancel := context.WithTimeout(ctx, t.shutdownTimeout)
+	defer cancel()
+
+	logger.Debug(
+		"shutdown",
 		slog.String("reason", reason),
 	)
 
@@ -271,16 +274,4 @@ func (t *t) Shutdown(ctx context.Context, reason string) error {
 	}
 
 	return nil
-}
-
-func (t *t) ShutdownHandler(sig os.Signal) error {
-	ctx, cancel := context.WithTimeout(context.Background(), t.shutdownTimeout)
-	defer cancel()
-
-	reason := "unknown"
-	if sig != nil {
-		reason = sig.String()
-	}
-
-	return t.Shutdown(ctx, reason)
 }

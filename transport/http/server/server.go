@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net"
-	"os"
 	"time"
 
 	_ "go.microcore.dev/framework"
@@ -21,70 +20,71 @@ import (
 	"github.com/valyala/fasthttp/pprofhandler"
 )
 
-type Manager interface {
-	SetListener(listener net.Listener) Manager
-	SetCore(core *fasthttp.Server) Manager
-	SetRouter(router *fasthttpRouter.Router) Manager
-	SetTelemetryManager(telemetry telemetry.Manager) Manager
-	EnableTLS(tls *TLS) Manager
-	AddMiddleware(MiddlewareHandler) Manager
-	AddRoute(opts ...RouteOption) Manager
-	AddRouteGroup(opts ...RouteGroupOption) Manager
-	UseCors(opts ...CorsOption) Manager
-	UseSwagger() Manager
-	UseProfiling() Manager
-	Listen() <-chan error
-	Up()
-	GetShutdownTimeout() time.Duration
-	GetShutdownHandler() bool
-	Shutdown(ctx context.Context, reason string) error
-	ShutdownHandler(sig os.Signal) error
-}
+type (
+	Manager interface {
+		SetListener(listener net.Listener) Manager
+		SetCore(core *fasthttp.Server) Manager
+		SetRouter(router *fasthttpRouter.Router) Manager
+		SetTelemetryManager(telemetry telemetry.Manager) Manager
+		EnableTLS(tls *TLS) Manager
+		AddMiddleware(MiddlewareHandler) Manager
+		AddRoute(opts ...RouteOption) Manager
+		AddRouteGroup(opts ...RouteGroupOption) Manager
+		UseCors(opts ...CorsOption) Manager
+		UseSwagger() Manager
+		UseProfiling() Manager
+		Listen() <-chan error
+		Up()
+		GetShutdownTimeout() time.Duration
+		GetShutdownHandler() bool
+		Shutdown(ctx context.Context, reason string) error
+	}
 
-type server struct {
-	listener        net.Listener
-	core            *fasthttp.Server
-	router          *fasthttpRouter.Router
-	middleware      middleware
-	telemetry       telemetry.Manager
-	tls             *TLS
-	shutdownTimeout time.Duration
-	shutdownHandler bool
-}
+	server struct {
+		listener        net.Listener
+		core            *fasthttp.Server
+		router          *fasthttpRouter.Router
+		middleware      middleware
+		telemetry       telemetry.Manager
+		tls             *TLS
+		shutdownTimeout time.Duration
+		shutdownHandler bool
+	}
 
-type route struct {
-	method      string
-	path        string
-	handler     func(*RequestContext)
-	middlewares []MiddlewareHandler
-}
-type rawRoute struct {
-	method  string
-	path    string
-	handler RequestHandler
-}
-type routeGroup struct {
-	path        string
-	middlewares []MiddlewareHandler
-	rawRoutes   []rawRoute
-	routeGroups []*routeGroup
-}
+	route struct {
+		method      string
+		path        string
+		handler     func(*RequestContext)
+		middlewares []MiddlewareHandler
+	}
+	rawRoute struct {
+		method  string
+		path    string
+		handler RequestHandler
+	}
+	routeGroup struct {
+		path        string
+		middlewares []MiddlewareHandler
+		rawRoutes   []rawRoute
+		routeGroups []*routeGroup
+	}
 
-type cors struct {
-	origin  string
-	methods string
-	headers string
-}
+	cors struct {
+		origin  string
+		methods string
+		headers string
+	}
 
-type TLS struct {
-	Cert string
-	Key  string
-}
+	TLS struct {
+		Cert string
+		Key  string
+	}
 
-type middleware = []func(fasthttp.RequestHandler) fasthttp.RequestHandler
+	middleware = []func(fasthttp.RequestHandler) fasthttp.RequestHandler
 
-type RequestHandler func(*RequestContext)
-type MiddlewareHandler func(RequestHandler) RequestHandler
+	RequestHandler    func(*RequestContext)
+	MiddlewareHandler func(RequestHandler) RequestHandler
+)
 
 var logger = log.New(pkg)
 
@@ -111,8 +111,8 @@ func New(opts ...Option) Manager {
 	}
 
 	if server.shutdownHandler {
-		shutdown.AddHandler(server.ShutdownHandler)
-		logger.Info("shutdown handler has been successfully registered")
+		shutdown.AddHandler(server.Shutdown)
+		logger.Debug("shutdown handler has been successfully registered")
 	}
 
 	logger.Info(
@@ -300,23 +300,15 @@ func (s *server) GetShutdownHandler() bool {
 }
 
 func (s *server) Shutdown(ctx context.Context, reason string) error {
-	logger.Info(
-		"shutting down",
-		slog.String("reason", reason),
-	)
-	return s.core.ShutdownWithContext(ctx)
-}
-
-func (s *server) ShutdownHandler(sig os.Signal) error {
-	ctx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+	ctx, cancel := context.WithTimeout(ctx, s.shutdownTimeout)
 	defer cancel()
 
-	reason := "unknown"
-	if sig != nil {
-		reason = sig.String()
-	}
+	logger.Debug(
+		"shutdown",
+		slog.String("reason", reason),
+	)
 
-	return s.Shutdown(ctx, reason)
+	return s.core.ShutdownWithContext(ctx)
 }
 
 func newRawRoute(opts ...RouteOption) *rawRoute {
