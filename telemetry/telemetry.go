@@ -37,7 +37,7 @@ import (
 	"go.microcore.dev/framework/shutdown"
 )
 
-type Interface interface {
+type Manager interface {
 	GetTraceProvider() *traceSdk.TracerProvider
 	GetMetricProvider() *metricSdk.MeterProvider
 	GetLogProvider() *logSdk.LoggerProvider
@@ -65,7 +65,7 @@ type t struct {
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) Interface {
+func New(opts ...Option) Manager {
 	t := &t{
 		propagator:      defaultPropagator,
 		shutdownTimeout: DefaultShutdownTimeout,
@@ -119,7 +119,7 @@ func New(opts ...Option) Interface {
 	return t
 }
 
-func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string) Interface {
+func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string) Manager {
 	return New(
 		WithTraceProviderOptions(
 			traceProvider.WithBatcher(

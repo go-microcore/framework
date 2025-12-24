@@ -59,7 +59,7 @@ func WithRouterOptions(opts ...router.Option) Option {
 	}
 }
 
-func WithTelemetryManager(telemetry telemetry.Interface) Option {
+func WithTelemetryManager(telemetry telemetry.Manager) Option {
 	return func(s *server) {
 		s.telemetry = telemetry
 

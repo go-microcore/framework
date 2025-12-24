@@ -19,15 +19,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type Interface interface {
-	SetCore(core *fasthttp.Client) Interface
-	SetTelemetryManager(telemetry telemetry.Interface) Interface
+type Manager interface {
+	SetCore(core *fasthttp.Client) Manager
+	SetTelemetryManager(telemetry telemetry.Manager) Manager
 	Request(url string, opts ...RequestOption) (*response, error)
 }
 
 type client struct {
 	core      *fasthttp.Client
-	telemetry telemetry.Interface
+	telemetry telemetry.Manager
 }
 
 type request struct {
@@ -44,7 +44,7 @@ type requestHeader struct {
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) Interface {
+func New(opts ...Option) Manager {
 	client := &client{}
 
 	for _, opt := range opts {
@@ -67,12 +67,12 @@ func NewRequestHeader(key, value string) requestHeader {
 	return requestHeader{key, value}
 }
 
-func (c *client) SetCore(core *fasthttp.Client) Interface {
+func (c *client) SetCore(core *fasthttp.Client) Manager {
 	c.core = core
 	return c
 }
 
-func (c *client) SetTelemetryManager(telemetry telemetry.Interface) Interface {
+func (c *client) SetTelemetryManager(telemetry telemetry.Manager) Manager {
 	c.telemetry = telemetry
 	return c
 }

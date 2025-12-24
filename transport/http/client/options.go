@@ -26,7 +26,7 @@ func WithCoreOptions(opts ...core.Option) Option {
 	}
 }
 
-func WithTelemetryManager(telemetry telemetry.Interface) Option {
+func WithTelemetryManager(telemetry telemetry.Manager) Option {
 	return func(s *client) {
 		s.telemetry = telemetry
 	}

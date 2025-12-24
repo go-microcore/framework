@@ -19,10 +19,10 @@ import (
 	"github.com/go-gormigrate/gormigrate/v2"
 )
 
-type Interface interface {
+type Manager interface {
 	Client() *gorm.DB
-	SetClient(client *gorm.DB) Interface
-	UseTelemetry(telemetry telemetry.Interface) error
+	SetClient(client *gorm.DB) Manager
+	SetTelemetryManager(telemetry telemetry.Manager) error
 	Migrate(migrations []*gormigrate.Migration, options *gormigrate.Options) error
 	GetShutdownTimeout() time.Duration
 	GetShutdownHandler() bool
@@ -39,7 +39,7 @@ type p struct {
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) Interface {
+func New(opts ...Option) Manager {
 	p := &p{
 		shutdownTimeout: DefaultShutdownTimeout,
 		shutdownHandler: DefaultShutdownHandler,
@@ -75,14 +75,14 @@ func (p *p) Client() *gorm.DB {
 	return p.client
 }
 
-func (p *p) SetClient(client *gorm.DB) Interface {
+func (p *p) SetClient(client *gorm.DB) Manager {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.client = client
 	return p
 }
 
-func (p *p) UseTelemetry(telemetry telemetry.Interface) error {
+func (p *p) SetTelemetryManager(telemetry telemetry.Manager) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

@@ -17,10 +17,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type Interface interface {
+type Manager interface {
 	Client() *redis.Client
-	SetClient(client *redis.Client) Interface
-	UseTelemetry(telemetry telemetry.Interface) error
+	SetClient(client *redis.Client) Manager
+	SetTelemetryManager(telemetry telemetry.Manager) error
 	GetShutdownTimeout() time.Duration
 	GetShutdownHandler() bool
 	Shutdown(ctx context.Context, reason string) error
@@ -39,7 +39,7 @@ const Nil = redis.Nil
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) Interface {
+func New(opts ...Option) Manager {
 	r := &r{
 		shutdownTimeout: DefaultShutdownTimeout,
 		shutdownHandler: DefaultShutdownHandler,
@@ -75,14 +75,14 @@ func (r *r) Client() *redis.Client {
 	return r.client
 }
 
-func (r *r) SetClient(client *redis.Client) Interface {
+func (r *r) SetClient(client *redis.Client) Manager {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.client = client
 	return r
 }
 
-func (r *r) UseTelemetry(telemetry telemetry.Interface) error {
+func (r *r) SetTelemetryManager(telemetry telemetry.Manager) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

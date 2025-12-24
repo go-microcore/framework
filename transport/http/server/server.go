@@ -21,18 +21,18 @@ import (
 	"github.com/valyala/fasthttp/pprofhandler"
 )
 
-type Interface interface {
-	SetListener(listener net.Listener) Interface
-	SetCore(core *fasthttp.Server) Interface
-	SetRouter(router *fasthttpRouter.Router) Interface
-	SetTelemetryManager(telemetry telemetry.Interface) Interface
-	EnableTLS(tls *TLS) Interface
-	AddMiddleware(MiddlewareHandler) Interface
-	AddRoute(opts ...RouteOption) Interface
-	AddRouteGroup(opts ...RouteGroupOption) Interface
-	UseCors(opts ...CorsOption) Interface
-	UseSwagger() Interface
-	UseProfiling() Interface
+type Manager interface {
+	SetListener(listener net.Listener) Manager
+	SetCore(core *fasthttp.Server) Manager
+	SetRouter(router *fasthttpRouter.Router) Manager
+	SetTelemetryManager(telemetry telemetry.Manager) Manager
+	EnableTLS(tls *TLS) Manager
+	AddMiddleware(MiddlewareHandler) Manager
+	AddRoute(opts ...RouteOption) Manager
+	AddRouteGroup(opts ...RouteGroupOption) Manager
+	UseCors(opts ...CorsOption) Manager
+	UseSwagger() Manager
+	UseProfiling() Manager
 	Listen() <-chan error
 	Up()
 	GetShutdownTimeout() time.Duration
@@ -46,7 +46,7 @@ type server struct {
 	core            *fasthttp.Server
 	router          *fasthttpRouter.Router
 	middleware      middleware
-	telemetry       telemetry.Interface
+	telemetry       telemetry.Manager
 	tls             *TLS
 	shutdownTimeout time.Duration
 	shutdownHandler bool
@@ -88,7 +88,7 @@ type MiddlewareHandler func(RequestHandler) RequestHandler
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) Interface {
+func New(opts ...Option) Manager {
 	server := &server{
 		shutdownTimeout: DefaultShutdownTimeout,
 		shutdownHandler: DefaultShutdownHandler,
@@ -128,37 +128,37 @@ func New(opts ...Option) Interface {
 	return server
 }
 
-func (s *server) SetListener(listener net.Listener) Interface {
+func (s *server) SetListener(listener net.Listener) Manager {
 	s.listener = listener
 	return s
 }
 
-func (s *server) SetCore(core *fasthttp.Server) Interface {
+func (s *server) SetCore(core *fasthttp.Server) Manager {
 	s.core = core
 	return s
 }
 
-func (s *server) SetRouter(router *fasthttpRouter.Router) Interface {
+func (s *server) SetRouter(router *fasthttpRouter.Router) Manager {
 	s.router = router
 	return s
 }
 
-func (s *server) SetTelemetryManager(telemetry telemetry.Interface) Interface {
+func (s *server) SetTelemetryManager(telemetry telemetry.Manager) Manager {
 	s.telemetry = telemetry
 	return s
 }
 
-func (s *server) EnableTLS(tls *TLS) Interface {
+func (s *server) EnableTLS(tls *TLS) Manager {
 	s.tls = tls
 	return s
 }
 
-func (s *server) AddRoute(opts ...RouteOption) Interface {
+func (s *server) AddRoute(opts ...RouteOption) Manager {
 	applyRoute(s.router, newRawRoute(opts...))
 	return s
 }
 
-func (s *server) AddMiddleware(middleware MiddlewareHandler) Interface {
+func (s *server) AddMiddleware(middleware MiddlewareHandler) Manager {
 	s.middleware = append(
 		s.middleware,
 		func(handler fasthttp.RequestHandler) fasthttp.RequestHandler {
@@ -174,12 +174,12 @@ func (s *server) AddMiddleware(middleware MiddlewareHandler) Interface {
 	return s
 }
 
-func (s *server) AddRouteGroup(opts ...RouteGroupOption) Interface {
+func (s *server) AddRouteGroup(opts ...RouteGroupOption) Manager {
 	applyRouteGroup(s.router, nil, newRouteGroup(opts...), []MiddlewareHandler{})
 	return s
 }
 
-func (s *server) UseCors(opts ...CorsOption) Interface {
+func (s *server) UseCors(opts ...CorsOption) Manager {
 	cors := &cors{
 		origin:  DefaultCorsOrigin,
 		methods: DefaultCorsMethods,
@@ -205,14 +205,14 @@ func (s *server) UseCors(opts ...CorsOption) Interface {
 	return s
 }
 
-func (s *server) UseSwagger() Interface {
+func (s *server) UseSwagger() Manager {
 	s.router.Handle("GET", "/swagger/{filepath:*}", func(ctx *fasthttp.RequestCtx) {
 		fastHttpSwagger.WrapHandler(fastHttpSwagger.InstanceName("swagger"))(ctx)
 	})
 	return s
 }
 
-func (s *server) UseProfiling() Interface {
+func (s *server) UseProfiling() Manager {
 	s.router.Handle("GET", "/debug/pprof/{profile:*}", pprofhandler.PprofHandler)
 	return s
 }
@@ -407,11 +407,8 @@ func applyRouteGroup(router *fasthttpRouter.Router, group *fasthttpRouter.Group,
 // chain and can contain data for distributed tracing
 // or any other implementations.
 func extractRequestContext(c *fasthttp.RequestCtx) context.Context {
-	var ctx context.Context
 	if c := c.UserValue("ctx"); c != nil {
-		ctx = c.(context.Context)
-	} else {
-		ctx = context.Background()
+		return c.(context.Context)
 	}
-	return ctx
+	return context.Background()
 }

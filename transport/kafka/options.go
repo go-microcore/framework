@@ -37,7 +37,7 @@ func WithReaders(readers map[string]*kafka.Reader) Option {
 	}
 }
 
-func WithTelemetryManager(telemetry telemetry.Interface) Option {
+func WithTelemetryManager(telemetry telemetry.Manager) Option {
 	return func(k *k) {
 		k.telemetry = telemetry
 	}

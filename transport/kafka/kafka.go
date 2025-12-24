@@ -26,18 +26,18 @@ import (
 )
 
 type (
-	Interface interface {
+	Manager interface {
 		GetTopicWriter(topic string) *kafka.Writer
 		GetTopicReader(topic string) *kafka.Reader
-		GetTelemetryManager() telemetry.Interface
-		SetTopicWriter(topic string, writer *kafka.Writer) Interface
-		SetTopicReader(topic string, reader *kafka.Reader) Interface
-		NewTopicWriter(topic string, opts ...writer.Option) Interface
-		NewTopicReader(topic string, opts ...reader.Option) Interface
-		UseTelemetry(telemetry telemetry.Interface) Interface
+		GetTelemetryManager() telemetry.Manager
+		SetTopicWriter(topic string, writer *kafka.Writer) Manager
+		SetTopicReader(topic string, reader *kafka.Reader) Manager
+		NewTopicWriter(topic string, opts ...writer.Option) Manager
+		NewTopicReader(topic string, opts ...reader.Option) Manager
+		SetTelemetryManager(telemetry telemetry.Manager) Manager
 		Pub(topic string, payload []byte, opts ...PubOption) error
 		PubJson(topic string, payload any, opts ...PubOption) error
-		Sub(topic string, opts ...SubOption) Interface
+		Sub(topic string, opts ...SubOption) Manager
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
 		Shutdown(ctx context.Context, reason string) error
@@ -52,7 +52,7 @@ type (
 		brokers         *brokers
 		writers         map[string]*kafka.Writer
 		readers         map[string]*kafka.Reader
-		telemetry       telemetry.Interface
+		telemetry       telemetry.Manager
 		shutdownTimeout time.Duration
 		shutdownHandler bool
 		wg              sync.WaitGroup
@@ -80,7 +80,7 @@ type (
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) Interface {
+func New(opts ...Option) Manager {
 	k := &k{
 		brokers: &brokers{
 			writer: []string{},
@@ -123,21 +123,21 @@ func (k *k) GetTopicReader(topic string) *kafka.Reader {
 	return k.readers[topic]
 }
 
-func (k *k) GetTelemetryManager() telemetry.Interface {
+func (k *k) GetTelemetryManager() telemetry.Manager {
 	return k.telemetry
 }
 
-func (k *k) SetTopicWriter(topic string, writer *kafka.Writer) Interface {
+func (k *k) SetTopicWriter(topic string, writer *kafka.Writer) Manager {
 	k.writers[topic] = writer
 	return k
 }
 
-func (k *k) SetTopicReader(topic string, reader *kafka.Reader) Interface {
+func (k *k) SetTopicReader(topic string, reader *kafka.Reader) Manager {
 	k.readers[topic] = reader
 	return k
 }
 
-func (k *k) NewTopicWriter(topic string, opts ...writer.Option) Interface {
+func (k *k) NewTopicWriter(topic string, opts ...writer.Option) Manager {
 	defaults := []writer.Option{
 		writer.WithAddr(
 			kafka.TCP(k.brokers.writer...),
@@ -150,7 +150,7 @@ func (k *k) NewTopicWriter(topic string, opts ...writer.Option) Interface {
 	return k
 }
 
-func (k *k) NewTopicReader(topic string, opts ...reader.Option) Interface {
+func (k *k) NewTopicReader(topic string, opts ...reader.Option) Manager {
 	defaults := []reader.Option{
 		reader.WithBrokers(k.brokers.reader),
 		reader.WithTopic(topic),
@@ -161,7 +161,7 @@ func (k *k) NewTopicReader(topic string, opts ...reader.Option) Interface {
 	return k
 }
 
-func (k *k) UseTelemetry(telemetry telemetry.Interface) Interface {
+func (k *k) SetTelemetryManager(telemetry telemetry.Manager) Manager {
 	k.telemetry = telemetry
 	return k
 }
@@ -205,7 +205,7 @@ func (k *k) PubJson(topic string, payload any, opts ...PubOption) error {
 	return k.Pub(topic, p, opts...)
 }
 
-func (k *k) Sub(topic string, opts ...SubOption) Interface {
+func (k *k) Sub(topic string, opts ...SubOption) Manager {
 	reader, ok := k.readers[topic]
 	if !ok {
 		logger.Error(
