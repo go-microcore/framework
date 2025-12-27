@@ -15,6 +15,6 @@ func New(exporter metric.Exporter, opts ...Option) *metric.PeriodicReader {
 		opt(&options)
 	}
 	reader := metric.NewPeriodicReader(exporter, options...)
-	logger.Info("reader has been successfully created")
+	logger.Debug("reader has been successfully created")
 	return reader
 }

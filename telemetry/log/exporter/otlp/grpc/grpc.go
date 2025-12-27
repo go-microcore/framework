@@ -28,7 +28,7 @@ func New(ctx context.Context, opts ...Option) *otlploggrpc.Exporter {
 		panic(err)
 	}
 
-	logger.Info("exporter has been successfully created")
+	logger.Debug("exporter has been successfully created")
 
 	return exporter
 }

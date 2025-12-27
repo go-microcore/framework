@@ -3,22 +3,23 @@ package log // import "go.microcore.dev/framework/log"
 import (
 	"context"
 	"log/slog"
+	"slices"
 )
 
-type ProxyHandler struct {
+type proxyHandler struct {
 	attrs []slog.Attr
 	group string
 }
 
-func NewProxyHandler() *ProxyHandler {
-	return &ProxyHandler{}
+func NewProxyHandler() *proxyHandler {
+	return &proxyHandler{}
 }
 
-func (h *ProxyHandler) Enabled(ctx context.Context, level slog.Level) bool {
+func (h *proxyHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return slog.Default().Handler().Enabled(ctx, level)
 }
 
-func (h *ProxyHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *proxyHandler) Handle(ctx context.Context, r slog.Record) error {
 	if len(h.attrs) > 0 {
 		r.AddAttrs(h.attrs...)
 	}
@@ -28,15 +29,15 @@ func (h *ProxyHandler) Handle(ctx context.Context, r slog.Record) error {
 	return slog.Default().Handler().Handle(ctx, r)
 }
 
-func (h *ProxyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &ProxyHandler{
-		attrs: append(append([]slog.Attr{}, h.attrs...), attrs...),
+func (h *proxyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &proxyHandler{
+		attrs: append(slices.Clone(h.attrs), attrs...),
 		group: h.group,
 	}
 }
 
-func (h *ProxyHandler) WithGroup(name string) slog.Handler {
-	return &ProxyHandler{
+func (h *proxyHandler) WithGroup(name string) slog.Handler {
+	return &proxyHandler{
 		attrs: h.attrs,
 		group: name,
 	}

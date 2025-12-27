@@ -39,6 +39,14 @@ func New(pkg string) *slog.Logger {
 	)
 }
 
-func SetLogLevel(level slog.Level) {
+func Level() slog.Level {
+	return logLevel.Level()
+}
+
+func SetLevelStr(level string) error {
+	return logLevel.UnmarshalText([]byte(level))
+}
+
+func SetLevel(level slog.Level) {
 	logLevel.Set(level)
 }

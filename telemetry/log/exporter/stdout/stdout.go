@@ -27,7 +27,7 @@ func New(opts ...Option) *stdoutlog.Exporter {
 		panic(err)
 	}
 
-	logger.Info("exporter has been successfully created")
+	logger.Debug("exporter has been successfully created")
 
 	return exporter
 }

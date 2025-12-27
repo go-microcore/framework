@@ -28,7 +28,7 @@ func New(opts ...Option) trace.SpanExporter {
 		panic(err)
 	}
 
-	logger.Info("exporter has been successfully created")
+	logger.Debug("exporter has been successfully created")
 
 	return exporter
 }

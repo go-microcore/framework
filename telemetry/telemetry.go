@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -13,6 +14,8 @@ import (
 	metricSdk "go.opentelemetry.io/otel/sdk/metric"
 	metricSdkExemplar "go.opentelemetry.io/otel/sdk/metric/exemplar"
 	traceSdk "go.opentelemetry.io/otel/sdk/trace"
+
+	telemetryLog "go.microcore.dev/framework/telemetry/log"
 
 	logProvider "go.microcore.dev/framework/telemetry/log/provider"
 	metricProvider "go.microcore.dev/framework/telemetry/metric/provider"
@@ -30,6 +33,8 @@ import (
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
@@ -119,7 +124,12 @@ func New(opts ...Option) Manager {
 	return t
 }
 
-func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string) Manager {
+func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string, service string) Manager {
+	host, err := os.Hostname()
+	if err != nil {
+		host = "undefined"
+	}
+
 	return New(
 		WithTraceProviderOptions(
 			traceProvider.WithBatcher(
@@ -146,6 +156,13 @@ func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string) Manager {
 					),
 				),
 			),
+			traceProvider.WithResource(
+				resource.NewWithAttributes(
+					semconv.SchemaURL,
+					semconv.ServiceNameKey.String(service),
+					semconv.HostNameKey.String(host),
+				),
+			),
 		),
 		WithMetricProviderOptions(
 			metricProvider.WithReader(
@@ -162,17 +179,33 @@ func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string) Manager {
 			metricProvider.WithExemplarFilter(
 				metricSdkExemplar.TraceBasedFilter,
 			),
+			metricProvider.WithResource(
+				resource.NewWithAttributes(
+					semconv.SchemaURL,
+					semconv.ServiceNameKey.String(service),
+					semconv.HostNameKey.String(host),
+				),
+			),
 		),
 		WithLogProviderOptions(
 			logProvider.WithProcessor(
-				logSdk.NewBatchProcessor(
-					logOtlpGrpcExporter.New(
-						ctx,
-						logOtlpGrpcExporter.WithEndpoint(endpoint),
-						logOtlpGrpcExporter.WithInsecure(),
+				telemetryLog.NewProcessor(
+					logSdk.NewBatchProcessor(
+						logOtlpGrpcExporter.New(
+							ctx,
+							logOtlpGrpcExporter.WithEndpoint(endpoint),
+							logOtlpGrpcExporter.WithInsecure(),
+						),
+						logSdk.WithExportInterval(DefaultLogExportInterval),
+						logSdk.WithExportTimeout(DefaultLogExportTimeout),
 					),
-					logSdk.WithExportInterval(DefaultLogExportInterval),
-					logSdk.WithExportTimeout(DefaultLogExportTimeout),
+				),
+			),
+			logProvider.WithResource(
+				resource.NewWithAttributes(
+					semconv.SchemaURL,
+					semconv.ServiceNameKey.String(service),
+					semconv.HostNameKey.String(host),
 				),
 			),
 		),
@@ -275,3 +308,5 @@ func (t *t) Shutdown(ctx context.Context, reason string) error {
 
 	return nil
 }
+
+
