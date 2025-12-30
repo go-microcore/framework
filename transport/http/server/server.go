@@ -194,10 +194,10 @@ func (s *server) UseCors(opts ...CorsOption) Manager {
 		s.middleware,
 		func(handler fasthttp.RequestHandler) fasthttp.RequestHandler {
 			return func(ctx *fasthttp.RequestCtx) {
+				handler(ctx)
 				ctx.Response.Header.Set("Access-Control-Allow-Origin", cors.origin)
 				ctx.Response.Header.Set("Access-Control-Allow-Methods", cors.methods)
 				ctx.Response.Header.Set("Access-Control-Allow-Headers", cors.headers)
-				handler(ctx)
 			}
 		},
 	)
