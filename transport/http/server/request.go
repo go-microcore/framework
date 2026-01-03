@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strconv"
 	"strings"
@@ -37,6 +38,10 @@ func (c *RequestContext) WriteError(err error) {
 			return
 		}
 	}
+	logger.Error(
+		"unhandled error",
+		slog.Any("error", err),
+	)
 	c.Error(
 		defaultResponseError.Error(),
 		ErrorStatusCodeMap[defaultResponseError],
