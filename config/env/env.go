@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"time"
 
 	_ "go.microcore.dev/framework"
 
@@ -153,4 +154,42 @@ func BytesDefault(key string, def []byte) []byte {
 		return def
 	}
 	return b
+}
+
+// DURATION
+
+func MustDuration(key string) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		panic("env: required duration variable " + key + " is not set")
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		panic("env: failed to parse duration " + key + ": " + err.Error())
+	}
+	return d
+}
+
+func Duration(key string) (time.Duration, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return 0, errors.New("env: variable " + key + " is not set")
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return 0, err
+	}
+	return d, nil
+}
+
+func DurationDefault(key string, def time.Duration) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return def
+	}
+	return d
 }
