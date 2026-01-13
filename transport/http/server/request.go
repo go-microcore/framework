@@ -2,6 +2,7 @@ package server // import "go.microcore.dev/framework/transport/http/server"
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -131,6 +132,28 @@ func (c *RequestContext) UserValueStr(key any) (string, error) {
 	default:
 		return fmt.Sprintf("%v", v), nil
 	}
+}
+
+func (c *RequestContext) UserValueStrBase64(key any) (string, error) {
+	encoded, err := c.UserValueStr(key)
+	if err != nil {
+		return "", err
+	}
+
+	decoders := []*base64.Encoding{
+        base64.RawURLEncoding,
+        base64.URLEncoding,
+        base64.StdEncoding,
+    }
+
+    for _, dec := range decoders {
+        decoded, err := dec.DecodeString(encoded)
+        if err == nil {
+            return string(decoded), nil
+        }
+    }
+
+    return "", fmt.Errorf("failed to decode Base64 for key %v", key)
 }
 
 func (c *RequestContext) UserValueInt(key any) (int, error) {
