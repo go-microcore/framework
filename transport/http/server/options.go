@@ -3,15 +3,13 @@ package server // import "go.microcore.dev/framework/transport/http/server"
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
 	"time"
 
 	fasthttpRouter "github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
+	
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/errors"
@@ -61,50 +59,7 @@ func WithRouterOptions(opts ...router.Option) Option {
 
 func WithTelemetryManager(telemetry telemetry.Manager) Option {
 	return func(s *server) {
-		s.telemetry = telemetry
-
-		s.middleware = append(
-			s.middleware,
-			func(handler fasthttp.RequestHandler) fasthttp.RequestHandler {
-				return func(c *fasthttp.RequestCtx) {
-					start := time.Now()
-
-					ctx := s.telemetry.GetPropagator().Extract(extractRequestContext(c), fasthttpRequestCtxHeaderCarrier{c})
-					ctx, span := telemetry.GetTracer().Start(ctx, "incoming http request")
-					defer span.End()
-					c.SetUserValue("ctx", ctx)
-
-					defer func() {
-						if rec := recover(); rec != nil {
-							span.RecordError(fmt.Errorf("panic: %v", rec))
-							span.SetStatus(codes.Error, fmt.Sprintf("panic: %v", rec))
-							panic(rec)
-						}
-
-						duration := time.Since(start).Seconds()
-						statusCode := c.Response.StatusCode()
-
-						span.SetAttributes(
-							attribute.String("path", string(c.Path())),
-							attribute.String("method", string(c.Method())),
-							attribute.Int("status", statusCode),
-							attribute.Float64("duration", duration),
-						)
-
-						switch {
-						case statusCode >= 500:
-							span.SetStatus(codes.Error, fmt.Sprintf("Server error: HTTP %d", statusCode))
-						case statusCode >= 400:
-							span.SetStatus(codes.Error, fmt.Sprintf("Client error: HTTP %d", statusCode))
-						default:
-							span.SetStatus(codes.Ok, fmt.Sprintf("HTTP %d", statusCode))
-						}
-					}()
-
-					handler(c)
-				}
-			},
-		)
+		s.SetTelemetryManager(telemetry)
 	}
 }
 
