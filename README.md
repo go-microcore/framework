@@ -9,6 +9,8 @@
 
 Microcore is a high-performance, modular framework for building microservices in Go.
 
+[![Go Reference](https://pkg.go.dev/badge/go.microcore.dev/framework.svg)](https://pkg.go.dev/go.microcore.dev/framework)
+
 ## Install
 ```bash
 go get go.microcore.dev/framework
@@ -33,11 +35,11 @@ func main() {
 ```
 
 ## Docs
-[https://microcore.dev](https://microcore.dev)
+[https://microcore.dev/framework](https://microcore.dev/framework)
 
 
 ## License
 
 This project is licensed under the terms of the [MIT License](LICENSE).
 
-Copyright © 2025 Microcore
+Copyright © 2026 Microcore
