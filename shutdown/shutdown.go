@@ -52,13 +52,22 @@ func init() {
 	go subscribe()
 }
 
-func WithContext(ctx context.Context) (context.Context, error) {
+// NewContext creates a global shutdown-aware context that can be used
+// as the root context for the entire program. If a parent context is
+// provided, it will be used; otherwise, context.Background() is created.
+// Returns an error if the context has already been initialized.
+// This allows consistent creation of a root context that can be canceled
+// when the application shuts down.
+func NewContext(parent context.Context) (context.Context, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ctx.cancel != nil {
 		return nil, errors.New("shutdown context has already been initialized")
 	}
-	s.ctx.ctx, s.ctx.cancel = context.WithCancel(ctx)
+	if parent == nil {
+		parent = context.Background()
+	}
+	s.ctx.ctx, s.ctx.cancel = context.WithCancel(parent)
 	return s.ctx.ctx, nil
 }
 
