@@ -2,6 +2,7 @@ package shutdown // import "go.microcore.dev/framework/shutdown"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -21,6 +22,12 @@ type (
 		handlers []Handler
 		once     sync.Once
 		mu       sync.Mutex
+		ctx      ctx
+	}
+
+	ctx struct {
+		ctx    context.Context
+		cancel context.CancelFunc
 	}
 
 	Handler func(ctx context.Context, reason string) error
@@ -33,13 +40,30 @@ var (
 		manual:   make(chan string, 1),
 		catch:    make(chan os.Signal, 1),
 		handlers: []Handler{},
+		ctx: ctx{
+			ctx: context.Background(),
+		},
 	}
-	
+
 	logger = log.New(pkg)
 )
 
 func init() {
 	go subscribe()
+}
+
+func WithContext(ctx context.Context) (context.Context, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.ctx.cancel != nil {
+		return nil, errors.New("shutdown context has already been initialized")
+	}
+	s.ctx.ctx, s.ctx.cancel = context.WithCancel(ctx)
+	return s.ctx.ctx, nil
+}
+
+func Context() context.Context {
+	return s.ctx.ctx
 }
 
 func AddHandler(handler Handler) {
@@ -60,6 +84,14 @@ func Shutdown(reason string) {
 	s.manual <- reason
 }
 
+func Exit(reason string) {
+	Shutdown(reason)
+	logger.Info(
+		"exit",
+		slog.String("reason", Wait()),
+	)
+}
+
 func subscribe() {
 	logger.Debug("subscribe")
 
@@ -78,6 +110,10 @@ func subscribe() {
 		"shutdown",
 		slog.String("reason", reason),
 	)
+
+	if s.ctx.cancel != nil {
+		s.ctx.cancel()
+	}
 
 	handlers(reason)
 	done(reason)
