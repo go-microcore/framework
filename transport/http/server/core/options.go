@@ -97,8 +97,10 @@ func WithMaxRequestBodySize(maxRequestBodySize int) Option {
 	}
 }
 
-// Maximum request body size.
-// The server rejects requests with bodies exceeding this limit.
+// Whether to disable keep-alive connections.
+//
+// The server will close all the incoming connections after sending
+// the first response to client if this option is set to true.
 func WithDisableKeepalive(disableKeepalive bool) Option {
 	return func(s *fasthttp.Server) {
 		s.DisableKeepalive = disableKeepalive
@@ -106,6 +108,7 @@ func WithDisableKeepalive(disableKeepalive bool) Option {
 }
 
 // Whether to enable tcp keep-alive connections.
+//
 // Whether the operating system should send tcp keep-alive messages
 // on the tcp connection.
 func WithTCPKeepalive(tcpKeepalive bool) Option {
