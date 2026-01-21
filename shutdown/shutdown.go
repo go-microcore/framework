@@ -52,20 +52,44 @@ func init() {
 	go subscribe()
 }
 
-// NewContext creates a global shutdown-aware context that can be used
-// as the root context for the entire program. If a parent context is
-// provided, it will be used; otherwise, context.Background() is created.
-// Returns an error if the context has already been initialized.
-// This allows consistent creation of a root context that can be canceled
-// when the application shuts down.
-func NewContext(parent context.Context) (context.Context, error) {
+// NewContext creates a root, shutdown-aware context for the entire program.
+// 
+// In any Go application, the root context serves as the base for all other
+// derived contexts. It is typically used to propagate cancellation signals
+// and deadlines across multiple goroutines and services. `NewContext` ensures
+// that the root context is properly initialized and protected from multiple
+// concurrent creations.
+//
+// This function wraps `WithContext(context.Background())` and returns a
+// cancelable context that will be automatically canceled when the application
+// initiates a shutdown, either manually via `Shutdown()`/`Exit()` or due to
+// system signals (e.g., SIGINT, SIGTERM). Using this root context as the base
+// for all other contexts ensures consistent handling of shutdown across the
+// program.
+//
+// Example usage:
+//
+//	ctx, err := shutdown.NewContext()
+//	if err != nil {
+//	    panic(err)
+//	}
+//	// pass `ctx` to servers, workers, or any long-running routines
+//
+// By standardizing the creation of a root shutdown context, the application
+// can gracefully cancel all operations and clean up resources consistently
+// when shutting down.
+func NewContext() (context.Context, error) {
+	return WithContext(context.Background())
+}
+
+func WithContext(parent context.Context) (context.Context, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ctx.cancel != nil {
 		return nil, errors.New("shutdown context has already been initialized")
 	}
 	if parent == nil {
-		parent = context.Background()
+		return nil, errors.New("parent context is nil")
 	}
 	s.ctx.ctx, s.ctx.cancel = context.WithCancel(parent)
 	return s.ctx.ctx, nil
