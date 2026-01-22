@@ -1,32 +1,48 @@
 package env // import "go.microcore.dev/framework/config/env"
 
 import (
-	"errors"
+	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
+
+	"go.microcore.dev/framework/shutdown"
 )
 
 func MustInt(key string) int {
 	v := os.Getenv(key)
 	if v == "" {
-		panic("env: required int variable " + key + " is not set")
+		logger.Error(
+			"required int variable is not set",
+			slog.String("key", key),
+		)
+		shutdown.Exit(shutdown.ExitConfigError)
 	}
+
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		panic("env: failed to parse int " + key + ": " + err.Error())
+		logger.Error(
+			"failed to parse int value",
+			slog.String("key", key),
+			slog.Any("error", err),
+		)
+		shutdown.Exit(shutdown.ExitConfigError)
 	}
+
 	return i
 }
 
 func Int(key string) (int, error) {
 	v := os.Getenv(key)
 	if v == "" {
-		return 0, errors.New("env: variable " + key + " is not set")
+		return 0, fmt.Errorf("variable %s is not set", key)
 	}
+
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to parse %s int value: %w", key, err)
 	}
+
 	return i, nil
 }
 
@@ -35,9 +51,16 @@ func IntDefault(key string, def int) int {
 	if v == "" {
 		return def
 	}
+
 	i, err := strconv.Atoi(v)
 	if err != nil {
+		logger.Warn(
+			"failed to parse int value",
+			slog.String("key", key),
+			slog.Any("error", err),
+		)
 		return def
 	}
+
 	return i
 }

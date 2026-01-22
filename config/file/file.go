@@ -41,25 +41,25 @@ func New(opts ...Option) error {
 
 	v := reflect.ValueOf(c.out)
 	if v.Kind() != reflect.Pointer || v.IsNil() {
-		return errors.New("config: out must be a non-nil pointer")
+		return errors.New("out must be a non-nil pointer")
 	}
 
 	data, err := os.ReadFile(c.path)
 	if err != nil {
-		return fmt.Errorf("config: failed to read file %q: %w", c.path, err)
+		return fmt.Errorf("failed to read file %q: %w", c.path, err)
 	}
 
 	switch c.format {
 	case JSON:
 		if err := json.Unmarshal(data, c.out); err != nil {
-			return fmt.Errorf("config: failed to unmarshal json: %w", err)
+			return fmt.Errorf("failed to unmarshal json: %w", err)
 		}
 	case YAML:
 		if err := yaml.Unmarshal(data, c.out); err != nil {
-			return fmt.Errorf("config: failed to unmarshal yaml: %w", err)
+			return fmt.Errorf("failed to unmarshal yaml: %w", err)
 		}
 	default:
-		return fmt.Errorf("config: unsupported format %q", c.format)
+		return fmt.Errorf("unsupported format %q", c.format)
 	}
 
 	return nil

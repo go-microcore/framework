@@ -1,23 +1,32 @@
 package env // import "go.microcore.dev/framework/config/env"
 
 import (
-	"errors"
+	"fmt"
+	"log/slog"
 	"os"
+
+	"go.microcore.dev/framework/shutdown"
 )
 
 func MustStr(key string) string {
 	v := os.Getenv(key)
 	if v == "" {
-		panic("env: required variable " + key + " is not set")
+		logger.Error(
+			"required string variable is not set",
+			slog.String("key", key),
+		)
+		shutdown.Exit(shutdown.ExitConfigError)
 	}
+
 	return v
 }
 
 func Str(key string) (string, error) {
 	v := os.Getenv(key)
 	if v == "" {
-		return "", errors.New("env: variable " + key + " is not set")
+		return "", fmt.Errorf("variable %s is not set", key)
 	}
+
 	return v, nil
 }
 
@@ -26,5 +35,6 @@ func StrDefault(key, def string) string {
 	if v == "" {
 		return def
 	}
+	
 	return v
 }

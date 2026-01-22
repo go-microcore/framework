@@ -41,7 +41,7 @@ type (
 		Up()
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
-		Shutdown(ctx context.Context, reason string) error
+		Shutdown(ctx context.Context, code int) error
 	}
 
 	server struct {
@@ -345,13 +345,13 @@ func (s *server) GetShutdownHandler() bool {
 	return s.shutdownHandler
 }
 
-func (s *server) Shutdown(ctx context.Context, reason string) error {
+func (s *server) Shutdown(ctx context.Context, code int) error {
 	ctx, cancel := context.WithTimeout(ctx, s.shutdownTimeout)
 	defer cancel()
 
 	logger.Debug(
 		"shutdown",
-		slog.String("reason", reason),
+		slog.Int("code", code),
 	)
 
 	return s.core.ShutdownWithContext(ctx)

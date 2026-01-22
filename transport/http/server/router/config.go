@@ -1,6 +1,9 @@
 package router // import "go.microcore.dev/framework/transport/http/server/router"
 
 import (
+	"log/slog"
+	"runtime/debug"
+
 	"github.com/valyala/fasthttp"
 	_ "go.microcore.dev/framework"
 )
@@ -19,7 +22,10 @@ func defaultRouterGlobalOPTIONS(ctx *fasthttp.RequestCtx) {
 }
 
 func defaultRouterNotFound(ctx *fasthttp.RequestCtx) {
-	ctx.Error(fasthttp.StatusMessage(fasthttp.StatusNotFound), fasthttp.StatusNotFound)
+	ctx.Error(
+		fasthttp.StatusMessage(fasthttp.StatusNotFound), 
+		fasthttp.StatusNotFound,
+	)
 }
 
 func defaultRouterMethodNotAllowed(ctx *fasthttp.RequestCtx) {
@@ -27,5 +33,14 @@ func defaultRouterMethodNotAllowed(ctx *fasthttp.RequestCtx) {
 	ctx.SetBodyString(fasthttp.StatusMessage(fasthttp.StatusMethodNotAllowed))
 }
 
-func defaultRouterPanicHandler(ctx *fasthttp.RequestCtx, rcv interface{}) {
+func defaultRouterPanicHandler(ctx *fasthttp.RequestCtx, r any) {
+	logger.Error(
+		"panic in handler",
+		slog.Any("error", r),
+		slog.String("stack", string(debug.Stack())),
+	)
+	ctx.Error(
+		fasthttp.StatusMessage(fasthttp.StatusInternalServerError),
+		fasthttp.StatusInternalServerError,
+	)
 }

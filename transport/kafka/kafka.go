@@ -39,7 +39,7 @@ type (
 		Sub(topic string, opts ...SubOption) Manager
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
-		Shutdown(ctx context.Context, reason string) error
+		Shutdown(ctx context.Context, code int) error
 	}
 
 	Message                            = kafka.Message
@@ -210,9 +210,7 @@ func (k *k) Sub(topic string, opts ...SubOption) Manager {
 			"sub: reader for topic not found",
 			slog.String("topic", topic),
 		)
-		panic(
-			fmt.Sprintf("sub: reader for topic %q not found", topic),
-		)
+		shutdown.Exit(shutdown.ExitUnavailable)
 	}
 	sub := &sub{
 		context: context.Background(),
@@ -221,11 +219,8 @@ func (k *k) Sub(topic string, opts ...SubOption) Manager {
 		opt(sub)
 	}
 	if sub.handler == nil {
-		err := errors.New("sub: handler undefined")
-		logger.Error(
-			err.Error(),
-		)
-		panic(err)
+		logger.Error("sub: handler undefined")
+		shutdown.Exit(shutdown.ExitSoftware)
 	}
 	k.wg.Add(1)
 	logger.Info(
@@ -290,36 +285,57 @@ func (k *k) GetShutdownHandler() bool {
 	return k.shutdownHandler
 }
 
-func (k *k) Shutdown(ctx context.Context, reason string) error {
+func (k *k) Shutdown(ctx context.Context, code int) error {
 	ctx, cancel := context.WithTimeout(ctx, k.shutdownTimeout)
 	defer cancel()
 
 	logger.Debug(
 		"shutdown",
-		slog.String("reason", reason),
+		slog.Int("code", code),
 	)
 
-	ch := make(chan error, 1)
-	go func() {
-		for topic, w := range k.writers {
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var errs []error
+
+	// Close writers
+	for topic, w := range k.writers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 			if err := w.Close(); err != nil {
-				ch <- fmt.Errorf("failed to close writer for topic %s: %v", topic, err)
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("failed to close writer for topic %s: %w", topic, err))
+				mu.Unlock()
 			}
-		}
-		for topic, r := range k.readers {
+		}()
+	}
+
+	// Close readers
+	for topic, r := range k.readers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 			if err := r.Close(); err != nil {
-				ch <- fmt.Errorf("failed to close reader for topic %s: %v", topic, err)
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("failed to close reader for topic %s: %w", topic, err))
+				mu.Unlock()
 			}
-		}
-		k.wg.Wait()
-		ch <- nil
+		}()
+	}
+
+	// Ждем внутренние горутины
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
 	}()
-	
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case err := <-ch:
-		return err
+	case <-done:
+		return errors.Join(errs...)
 	}
 }
 

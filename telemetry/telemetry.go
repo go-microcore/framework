@@ -2,10 +2,12 @@ package telemetry // import "go.microcore.dev/framework/telemetry"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -53,8 +55,8 @@ type (
 		GetMetricsHttpHandler() http.Handler
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
-		ForceFlush(ctx context.Context, reason string) error
-		Shutdown(ctx context.Context, reason string) error
+		ForceFlush(ctx context.Context) error
+		Shutdown(ctx context.Context, code int) error
 	}
 
 	t struct {
@@ -252,61 +254,68 @@ func (t *t) GetShutdownHandler() bool {
 	return t.shutdownHandler
 }
 
-func (t *t) ForceFlush(ctx context.Context, reason string) error {
-	logger.Info(
-		"force flush",
-		slog.String("reason", reason),
-	)
+func (t *t) ForceFlush(ctx context.Context) error {
+	logger.Debug("force flush")
 
-	if t.traceProvider != nil {
-		if err := t.traceProvider.ForceFlush(ctx); err != nil {
-			return fmt.Errorf("telemetry trace force flush failed: %v", err)
-		}
-	}
-	if t.metricProvider != nil {
-		if err := t.metricProvider.ForceFlush(ctx); err != nil {
-			return fmt.Errorf("telemetry metric force flush failed: %v", err)
-		}
-	}
-	if t.logProvider != nil {
-		if err := t.logProvider.ForceFlush(ctx); err != nil {
-			return fmt.Errorf("telemetry log force flush failed: %v", err)
-		}
+	providers := []struct {
+		name string
+		fn   func(context.Context) error
+	}{
+		{"trace", t.traceProvider.ForceFlush},
+		{"metric", t.metricProvider.ForceFlush},
+		{"log", t.logProvider.ForceFlush},
 	}
 
-	return nil
+	return runProviders(ctx, "force flush", providers)
 }
 
-func (t *t) Shutdown(ctx context.Context, reason string) error {
+func (t *t) Shutdown(ctx context.Context, code int) error {
 	ctx, cancel := context.WithTimeout(ctx, t.shutdownTimeout)
 	defer cancel()
 
 	logger.Debug(
 		"shutdown",
-		slog.String("reason", reason),
+		slog.Int("code", code),
 	)
 
-	if err := t.ForceFlush(ctx, reason); err != nil {
-		return err
+	providers := []struct {
+		name string
+		fn   func(context.Context) error
+	}{
+		{"trace", t.traceProvider.Shutdown},
+		{"metric", t.metricProvider.Shutdown},
+		{"log", t.logProvider.Shutdown},
 	}
 
-	if t.traceProvider != nil {
-		if err := t.traceProvider.Shutdown(ctx); err != nil {
-			return fmt.Errorf("telemetry trace shutdown failed: %v", err)
-		}
-	}
-	if t.metricProvider != nil {
-		if err := t.metricProvider.Shutdown(ctx); err != nil {
-			return fmt.Errorf("telemetry metric shutdown failed: %v", err)
-		}
-	}
-	if t.logProvider != nil {
-		if err := t.logProvider.Shutdown(ctx); err != nil {
-			return fmt.Errorf("telemetry log shutdown failed: %v", err)
-		}
-	}
-
-	return nil
+	return errors.Join(
+		t.ForceFlush(ctx),
+		runProviders(ctx, "shutdown", providers),
+	)
 }
 
+func runProviders(ctx context.Context, action string, providers []struct {
+	name string
+	fn   func(context.Context) error
+}) error {
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var errs []error
 
+	for _, p := range providers {
+		if p.fn == nil {
+			continue
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := p.fn(ctx); err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("telemetry %s %s failed: %w", p.name, action, err))
+				mu.Unlock()
+			}
+		}()
+	}
+
+	wg.Wait()
+	return errors.Join(errs...)
+}

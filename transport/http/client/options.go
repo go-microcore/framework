@@ -8,6 +8,7 @@ import (
 	"github.com/valyala/fasthttp"
 
 	_ "go.microcore.dev/framework"
+	"go.microcore.dev/framework/shutdown"
 	"go.microcore.dev/framework/telemetry"
 	"go.microcore.dev/framework/transport/http/client/core"
 )
@@ -52,6 +53,11 @@ func WithRequestBody(body []byte) RequestOption {
 	}
 }
 
+// WithRequestJsonBody serializes the given data to JSON and returns a RequestOption
+// that sets it as the request body.
+//
+// If serialization fails, the function logs the error and immediately terminates
+// the program with exit code 65 (ExitDataError), indicating invalid input data.
 func WithRequestJsonBody(data any) RequestOption {
 	bytes, err := json.Marshal(data)
 	if err != nil {
@@ -59,7 +65,7 @@ func WithRequestJsonBody(data any) RequestOption {
 			"failed to parse json body",
 			slog.Any("error", err),
 		)
-		panic(err)
+		shutdown.Exit(shutdown.ExitDataError)
 	}
 	return func(r *request) {
 		r.body = bytes

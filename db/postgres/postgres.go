@@ -26,7 +26,7 @@ type (
 		Migrate(migrations []*gormigrate.Migration, options *gormigrate.Options) error
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
-		Shutdown(ctx context.Context, reason string) error
+		Shutdown(ctx context.Context, code int) error
 	}
 
 	p struct {
@@ -125,13 +125,13 @@ func (p *p) GetShutdownHandler() bool {
 	return p.shutdownHandler
 }
 
-func (p *p) Shutdown(ctx context.Context, reason string) error {
+func (p *p) Shutdown(ctx context.Context, code int) error {
 	ctx, cancel := context.WithTimeout(ctx, p.shutdownTimeout)
 	defer cancel()
 
 	logger.Debug(
 		"shutdown",
-		slog.String("reason", reason),
+		slog.Int("code", code),
 	)
 
 	p.mu.RLock()

@@ -5,6 +5,7 @@ import (
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
+	"go.microcore.dev/framework/shutdown"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -36,7 +37,7 @@ func New(opts ...Option) *gorm.DB {
 			"failed to create client",
 			slog.Any("error", err),
 		)
-		panic(err)
+		shutdown.Exit(shutdown.ExitUnavailable)
 	}
 
 	logger.Debug(

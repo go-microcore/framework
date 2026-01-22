@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	shutdownSignals = []os.Signal{
+	signals = []os.Signal{
 		syscall.SIGINT,
 		syscall.SIGTERM,
 		syscall.SIGQUIT,

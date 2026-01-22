@@ -2,31 +2,47 @@ package env // import "go.microcore.dev/framework/config/env"
 
 import (
 	"encoding/base64"
-	"errors"
+	"fmt"
+	"log/slog"
 	"os"
+
+	"go.microcore.dev/framework/shutdown"
 )
 
 func MustBytesB64(key string) []byte {
 	v := os.Getenv(key)
 	if v == "" {
-		panic("env: required base64 variable " + key + " is not set")
+		logger.Error(
+			"required base64 variable is not set",
+			slog.String("key", key),
+		)
+		shutdown.Exit(shutdown.ExitConfigError)
 	}
+
 	b, err := base64.StdEncoding.DecodeString(v)
 	if err != nil {
-		panic("env: failed to decode base64 " + key + ": " + err.Error())
+		logger.Error(
+			"failed to decode base64 value",
+			slog.String("key", key),
+			slog.Any("error", err),
+		)
+		shutdown.Exit(shutdown.ExitConfigError)
 	}
+
 	return b
 }
 
 func BytesB64(key string) ([]byte, error) {
 	v := os.Getenv(key)
 	if v == "" {
-		return nil, errors.New("env: variable " + key + " is not set")
+		return nil, fmt.Errorf("variable %s is not set", key)
 	}
+
 	b, err := base64.StdEncoding.DecodeString(v)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode %s base64 value: %w", key, err)
 	}
+
 	return b, nil
 }
 
@@ -35,9 +51,16 @@ func BytesB64Default(key string, def []byte) []byte {
 	if v == "" {
 		return def
 	}
+
 	b, err := base64.StdEncoding.DecodeString(v)
 	if err != nil {
+		logger.Warn(
+			"failed to decode base64 value",
+			slog.String("key", key),
+			slog.Any("error", err),
+		)
 		return def
 	}
+
 	return b
 }

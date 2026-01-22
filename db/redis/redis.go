@@ -23,7 +23,7 @@ type (
 		SetTelemetryManager(telemetry telemetry.Manager) error
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
-		Shutdown(ctx context.Context, reason string) error
+		Shutdown(ctx context.Context, code int) error
 	}
 
 	r struct {
@@ -111,13 +111,13 @@ func (r *r) GetShutdownHandler() bool {
 	return r.shutdownHandler
 }
 
-func (r *r) Shutdown(ctx context.Context, reason string) error {
+func (r *r) Shutdown(ctx context.Context, code int) error {
 	ctx, cancel := context.WithTimeout(ctx, r.shutdownTimeout)
 	defer cancel()
 
 	logger.Debug(
 		"shutdown",
-		slog.String("reason", reason),
+		slog.Int("code", code),
 	)
 
 	ch := make(chan error, 1)

@@ -3,11 +3,13 @@ package shutdown // import "go.microcore.dev/framework/shutdown"
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"sync"
+	"sync/atomic"
+	"syscall"
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
@@ -15,9 +17,8 @@ import (
 
 type (
 	shutdown struct {
-		signals  []os.Signal
-		done     chan string
-		manual   chan string
+		exit     chan int
+		code     chan int
 		catch    chan os.Signal
 		handlers []Handler
 		once     sync.Once
@@ -30,14 +31,13 @@ type (
 		cancel context.CancelFunc
 	}
 
-	Handler func(ctx context.Context, reason string) error
+	Handler func(ctx context.Context, code int) error
 )
 
 var (
 	s = &shutdown{
-		signals:  shutdownSignals,
-		done:     make(chan string, 1),
-		manual:   make(chan string, 1),
+		exit:     make(chan int, 1),
+		code:     make(chan int, 1),
 		catch:    make(chan os.Signal, 1),
 		handlers: []Handler{},
 		ctx: ctx{
@@ -53,7 +53,7 @@ func init() {
 }
 
 // NewContext creates a root, shutdown-aware context for the entire program.
-// 
+//
 // In any Go application, the root context serves as the base for all other
 // derived contexts. It is typically used to propagate cancellation signals
 // and deadlines across multiple goroutines and services. `NewContext` ensures
@@ -109,73 +109,97 @@ func AddHandler(handler Handler) {
 	)
 }
 
-func Wait() string {
-	return <-s.done
+func Wait() {
+	os.Exit(<-s.exit)
 }
 
-func Shutdown(reason string) {
-	s.manual <- reason
+func Shutdown(code int) {
+	s.code <- code
 }
 
-func Exit(reason string) {
-	Shutdown(reason)
-	logger.Info(
-		"exit",
-		slog.String("reason", Wait()),
-	)
+func Exit(code int) {
+	Shutdown(code)
+	Wait()
+}
+
+func Recover() {
+	if r := recover(); r != nil {
+		logger.Error(
+			"panic",
+			slog.Any("error", r),
+			slog.String("stack", string(debug.Stack())),
+		)
+		Exit(ExitPanic)
+	}
 }
 
 func subscribe() {
 	logger.Debug("subscribe")
 
-	signal.Notify(s.catch, s.signals...)
+	signal.Notify(s.catch, signals...)
 	defer signal.Stop(s.catch)
 
-	var reason string
+	var code int
 
 	select {
-	case reason = <-s.manual:
+	case code = <-s.code:
 	case sig := <-s.catch:
-		reason = fmt.Sprintf("syscall (%s)", sig.String())
+		code = ExitSignalBase + int(sig.(syscall.Signal))
 	}
 
 	logger.Info(
 		"shutdown",
-		slog.String("reason", reason),
+		slog.Int("code", code),
 	)
 
 	if s.ctx.cancel != nil {
 		s.ctx.cancel()
 	}
 
-	handlers(reason)
-	done(reason)
+	if handlers(code) {
+		if code > ExitSignalBase {
+			code = ExitOK
+		}
+	} else {
+		if code > ExitSignalBase {
+			code = ExitShutdownError
+		}
+	}
+
+	exit(code)
 }
 
-func handlers(reason string) {
+func handlers(code int) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 	defer cancel()
 
 	var wg sync.WaitGroup
 	wg.Add(len(s.handlers))
 
+	var success atomic.Bool
+	success.Store(true)
+
 	for _, fn := range s.handlers {
-		go func(fn Handler) {
+		go func() {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
 					logger.Error(
-						fmt.Sprintf("panic in shutdown handler: %v", r),
+						"panic in shutdown handler",
+						slog.Any("error", r),
+						slog.String("stack", string(debug.Stack())),
 					)
+					success.Store(false)
 				}
 			}()
-			if err := fn(ctx, reason); err != nil {
+			if err := fn(ctx, code); err != nil {
 				logger.Error(
-					"handler error",
+					"error in shutdown handler",
 					slog.Any("error", err),
 				)
+				success.Store(false)
 			}
-		}(fn)
+		}()
 	}
 
 	done := make(chan struct{})
@@ -187,15 +211,21 @@ func handlers(reason string) {
 	select {
 	case <-ctx.Done():
 		logger.Warn("shutdown handlers timed out")
+		return false
 	case <-done:
 		logger.Debug("all shutdown handlers completed")
+		return success.Load()
 	}
 }
 
-func done(reason string) {
+func exit(code int) {
 	s.once.Do(func() {
-		s.done <- reason
-		close(s.done)
-		close(s.manual)
+		logger.Info(
+			"exit",
+			slog.Int("code", code),
+		)
+		s.exit <- code
+		close(s.exit)
+		close(s.code)
 	})
 }

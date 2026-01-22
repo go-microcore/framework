@@ -6,6 +6,7 @@ import (
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
+	"go.microcore.dev/framework/shutdown"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -26,7 +27,7 @@ func New(ctx context.Context, opts ...Option) *otlptrace.Exporter {
 			"failed to create exporter",
 			slog.Any("error", err),
 		)
-		panic(err)
+		shutdown.Exit(shutdown.ExitUnavailable)
 	}
 
 	logger.Debug("exporter has been successfully created")
