@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	netUrl "net/url"
 
 	"github.com/valyala/fasthttp"
@@ -54,11 +53,6 @@ func New(opts ...Option) Manager {
 	if client.core == nil {
 		client.core = core.New()
 	}
-
-	logger.Info(
-		"created",
-		slog.Bool("telemetry", client.telemetry != nil),
-	)
 
 	return client
 }

@@ -55,9 +55,10 @@ func BytesHexDefault(key string, def []byte) []byte {
 	b, err := hex.DecodeString(v)
 	if err != nil {
 		logger.Warn(
-			"failed to decode hex value",
-			slog.String("key", key),
+			"failed to parse hex value, using default",
 			slog.Any("error", err),
+			slog.String("key", key),
+			slog.Any("default", def),
 		)
 		return def
 	}

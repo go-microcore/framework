@@ -41,10 +41,10 @@ func New(opts ...Option) *gorm.DB {
 	}
 
 	logger.Debug(
-		"client has been successfully created",
+		"client created",
 		slog.Group("postgres",
 			slog.String("driver_name", config.postgres.DriverName),
-			slog.String("dsn", config.postgres.DSN),
+			slog.String("dsn", MaskDSN(config.postgres.DSN)),
 			slog.Bool("without_quoting_check", config.postgres.WithoutQuotingCheck),
 			slog.Bool("prefer_simple_protocol", config.postgres.PreferSimpleProtocol),
 			slog.Bool("without_returning", config.postgres.WithoutReturning),

@@ -29,7 +29,7 @@ func New(opts ...Option) *router.Router {
 	}
 
 	logger.Debug(
-		"router has been successfully created",
+		"router created",
 		slog.Bool("save_matched_route_path", router.SaveMatchedRoutePath),
 		slog.Bool("redirect_trailing_slash", router.RedirectTrailingSlash),
 		slog.Bool("redirect_fixed_path", router.RedirectFixedPath),

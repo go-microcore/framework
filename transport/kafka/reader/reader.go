@@ -15,6 +15,6 @@ func New(opts ...Option) *kafka.Reader {
 		opt(config)
 	}
 	reader := kafka.NewReader(*config)
-	logger.Info("reader has been successfully created")
+	logger.Debug("reader created")
 	return reader
 }

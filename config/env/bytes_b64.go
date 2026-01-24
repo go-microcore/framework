@@ -55,9 +55,10 @@ func BytesB64Default(key string, def []byte) []byte {
 	b, err := base64.StdEncoding.DecodeString(v)
 	if err != nil {
 		logger.Warn(
-			"failed to decode base64 value",
-			slog.String("key", key),
+			"failed to parse base64 value, using default",
 			slog.Any("error", err),
+			slog.String("key", key),
+			slog.Any("default", def),
 		)
 		return def
 	}

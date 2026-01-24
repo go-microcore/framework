@@ -86,7 +86,7 @@ func WithContext(parent context.Context) (context.Context, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ctx.cancel != nil {
-		return nil, errors.New("shutdown context has already been initialized")
+		return nil, errors.New("shutdown context already initialized")
 	}
 	if parent == nil {
 		return nil, errors.New("parent context is nil")
@@ -103,10 +103,6 @@ func AddHandler(handler Handler) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.handlers = append(s.handlers, handler)
-	logger.Debug(
-		"handler added",
-		slog.Int("total", len(s.handlers)),
-	)
 }
 
 func Wait() {
@@ -134,8 +130,6 @@ func Recover() {
 }
 
 func subscribe() {
-	logger.Debug("subscribe")
-
 	signal.Notify(s.catch, signals...)
 	defer signal.Stop(s.catch)
 
@@ -185,7 +179,7 @@ func handlers(code int) bool {
 			defer func() {
 				if r := recover(); r != nil {
 					logger.Error(
-						"panic in shutdown handler",
+						"panic in handler",
 						slog.Any("error", r),
 						slog.String("stack", string(debug.Stack())),
 					)
@@ -194,7 +188,7 @@ func handlers(code int) bool {
 			}()
 			if err := fn(ctx, code); err != nil {
 				logger.Error(
-					"error in shutdown handler",
+					"error in handler",
 					slog.Any("error", err),
 				)
 				success.Store(false)
@@ -210,10 +204,10 @@ func handlers(code int) bool {
 
 	select {
 	case <-ctx.Done():
-		logger.Warn("shutdown handlers timed out")
+		logger.Warn("handlers timed out")
 		return false
 	case <-done:
-		logger.Debug("all shutdown handlers completed")
+		logger.Info("all handlers completed")
 		return success.Load()
 	}
 }

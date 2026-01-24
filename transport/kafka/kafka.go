@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
@@ -36,7 +35,7 @@ type (
 		SetTelemetryManager(telemetry telemetry.Manager) Manager
 		Pub(topic string, payload []byte, opts ...PubOption) error
 		PubJson(topic string, payload any, opts ...PubOption) error
-		Sub(topic string, opts ...SubOption) Manager
+		Sub(topic string, opts ...SubOption) error
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
 		Shutdown(ctx context.Context, code int) error
@@ -53,7 +52,6 @@ type (
 		telemetry       telemetry.Manager
 		shutdownTimeout time.Duration
 		shutdownHandler bool
-		wg              sync.WaitGroup
 	}
 
 	brokers struct {
@@ -96,19 +94,8 @@ func New(opts ...Option) Manager {
 
 	if k.shutdownHandler {
 		shutdown.AddHandler(k.Shutdown)
-		logger.Debug("shutdown handler has been successfully registered")
+		logger.Debug("shutdown handler registered")
 	}
-
-	logger.Info(
-		"created",
-		slog.Group("shutdown",
-			slog.Duration("timeout", k.shutdownTimeout),
-			slog.Bool("handler", k.shutdownHandler),
-		),
-		slog.Bool("telemetry", k.telemetry != nil),
-		slog.String("brokers.writer", strings.Join(k.brokers.writer, ",")),
-		slog.String("brokers.reader", strings.Join(k.brokers.reader, ",")),
-	)
 
 	return k
 }
@@ -167,7 +154,7 @@ func (k *k) SetTelemetryManager(telemetry telemetry.Manager) Manager {
 func (k *k) Pub(topic string, payload []byte, opts ...PubOption) error {
 	writer, ok := k.writers[topic]
 	if !ok {
-		return fmt.Errorf("writer for topic %q not found", topic)
+		return errors.New("writer not found")
 	}
 	pub := &pub{
 		context: context.Background(),
@@ -203,14 +190,10 @@ func (k *k) PubJson(topic string, payload any, opts ...PubOption) error {
 	return k.Pub(topic, p, opts...)
 }
 
-func (k *k) Sub(topic string, opts ...SubOption) Manager {
+func (k *k) Sub(topic string, opts ...SubOption) error {
 	reader, ok := k.readers[topic]
 	if !ok {
-		logger.Error(
-			"sub: reader for topic not found",
-			slog.String("topic", topic),
-		)
-		shutdown.Exit(shutdown.ExitUnavailable)
+		return errors.New("reader not found")
 	}
 	sub := &sub{
 		context: context.Background(),
@@ -219,37 +202,30 @@ func (k *k) Sub(topic string, opts ...SubOption) Manager {
 		opt(sub)
 	}
 	if sub.handler == nil {
-		logger.Error("sub: handler undefined")
-		shutdown.Exit(shutdown.ExitSoftware)
+		return errors.New("handler undefined")
 	}
-	k.wg.Add(1)
-	logger.Info(
-		"sub: reader started",
-		slog.String("topic", topic),
-	)
 	go func() {
-		defer k.wg.Done()
 		for {
 			msg, err := reader.ReadMessage(sub.context)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					logger.Info(
-						"sub: context canceled, stop consuming topic",
+						"sub: context canceled, stop consuming",
 						slog.String("topic", topic),
 					)
 					return
 				}
 				if errors.Is(err, io.EOF) {
 					logger.Info(
-						"sub: reader closed for topic",
+						"sub: reader closed",
 						slog.String("topic", topic),
 					)
 					return
 				}
 				logger.Error(
-					"sub: failed to read message from topic",
-					slog.String("topic", topic),
+					"sub: failed to read message",
 					slog.Any("error", err),
+					slog.String("topic", topic),
 				)
 				continue
 			}
@@ -261,8 +237,9 @@ func (k *k) Sub(topic string, opts ...SubOption) Manager {
 			}
 			if err := sub.handler(wctx, msg); err != nil {
 				logger.Error(
-					"sub: failed to handle message",
+					"sub: message handler failed",
 					slog.Any("error", err),
+					slog.String("topic", topic),
 				)
 				if k.telemetry != nil {
 					span.RecordError(err)
@@ -274,7 +251,7 @@ func (k *k) Sub(topic string, opts ...SubOption) Manager {
 			}
 		}
 	}()
-	return k
+	return nil
 }
 
 func (k *k) GetShutdownTimeout() time.Duration {
@@ -324,7 +301,6 @@ func (k *k) Shutdown(ctx context.Context, code int) error {
 		}()
 	}
 
-	// Ждем внутренние горутины
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()

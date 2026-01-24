@@ -30,7 +30,7 @@ func New(ctx context.Context, opts ...Option) *otlptrace.Exporter {
 		shutdown.Exit(shutdown.ExitUnavailable)
 	}
 
-	logger.Debug("exporter has been successfully created")
+	logger.Debug("exporter created")
 
 	return exporter
 }

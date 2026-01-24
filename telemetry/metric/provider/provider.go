@@ -15,6 +15,6 @@ func New(opts ...Option) *metric.MeterProvider {
 		opt(&options)
 	}
 	provider := metric.NewMeterProvider(options...)
-	logger.Debug("provider has been successfully created")
+	logger.Debug("provider created")
 	return provider
 }

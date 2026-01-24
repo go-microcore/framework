@@ -29,7 +29,7 @@ func New(ctx context.Context, opts ...Option) *otlpmetricgrpc.Exporter {
 		shutdown.Exit(shutdown.ExitUnavailable)
 	}
 
-	logger.Debug("exporter has been successfully created")
+	logger.Debug("exporter created")
 
 	return exporter
 }

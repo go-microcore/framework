@@ -28,7 +28,7 @@ func New(opts ...Option) *stdoutlog.Exporter {
 		shutdown.Exit(shutdown.ExitUnavailable)
 	}
 
-	logger.Debug("exporter has been successfully created")
+	logger.Debug("exporter created")
 
 	return exporter
 }

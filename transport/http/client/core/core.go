@@ -32,7 +32,7 @@ func New(opts ...Option) *fasthttp.Client {
 	}
 
 	logger.Debug(
-		"core has been successfully created",
+		"core created",
 		slog.Any("transport", core.Transport),
 		slog.Any("dial_timeout", core.DialTimeout),
 		slog.Any("dial", core.Dial),

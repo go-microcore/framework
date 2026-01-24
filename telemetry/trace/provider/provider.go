@@ -16,6 +16,6 @@ func New(opts ...Option) *trace.TracerProvider {
 		opt(&options)
 	}
 	provider := trace.NewTracerProvider(options...)
-	logger.Debug("provider has been successfully created")
+	logger.Debug("provider created")
 	return provider
 }

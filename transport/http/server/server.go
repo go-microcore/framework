@@ -116,18 +116,8 @@ func New(opts ...Option) Manager {
 
 	if server.shutdownHandler {
 		shutdown.AddHandler(server.Shutdown)
-		logger.Debug("shutdown handler has been successfully registered")
+		logger.Debug("shutdown handler registered")
 	}
-
-	logger.Info(
-		"created",
-		slog.Group("shutdown",
-			slog.Duration("timeout", server.shutdownTimeout),
-			slog.Bool("handler", server.shutdownHandler),
-		),
-		slog.Bool("telemetry", server.telemetry != nil),
-		slog.Bool("tls", server.tls != nil),
-	)
 
 	return server
 }

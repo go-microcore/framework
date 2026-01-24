@@ -55,9 +55,10 @@ func BoolDefault(key string, def bool) bool {
 	b, err := strconv.ParseBool(v)
 	if err != nil {
 		logger.Warn(
-			"failed to parse bool value",
-			slog.String("key", key),
+			"failed to parse bool value, using default",
 			slog.Any("error", err),
+			slog.String("key", key),
+			slog.Bool("default", def),
 		)
 		return def
 	}

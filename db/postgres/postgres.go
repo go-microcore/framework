@@ -55,16 +55,8 @@ func New(opts ...Option) Manager {
 
 	if p.shutdownHandler {
 		shutdown.AddHandler(p.Shutdown)
-		logger.Debug("shutdown handler has been successfully registered")
+		logger.Debug("shutdown handler registered")
 	}
-
-	logger.Info(
-		"manager has been successfully created",
-		slog.Group("shutdown",
-			slog.Duration("timeout", p.shutdownTimeout),
-			slog.Bool("handler", p.shutdownHandler),
-		),
-	)
 
 	return p
 }
@@ -85,36 +77,18 @@ func (p *p) SetClient(client *gorm.DB) Manager {
 func (p *p) SetTelemetryManager(telemetry telemetry.Manager) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-
-	if err := p.client.Use(
+	return p.client.Use(
 		tracing.NewPlugin(
 			tracing.WithTracerProvider(
 				telemetry.GetTraceProvider(),
 			),
 		),
-	); err != nil {
-		logger.Error(
-			"failed to use otel tracing",
-			slog.Any("error", err),
-		)
-		return err
-	}
-
-	logger.Info("otel tracing has been successfully initialized")
-	return nil
+	)
 }
 
 func (p *p) Migrate(migrations []*gormigrate.Migration, options *gormigrate.Options) error {
 	m := gormigrate.New(p.client, options, migrations)
-	if err := m.Migrate(); err != nil {
-		logger.Error(
-			"could not migrate",
-			slog.Any("error", err),
-		)
-		return err
-	}
-	logger.Info("migrations have been successfully completed")
-	return nil
+	return m.Migrate()
 }
 
 func (p *p) GetShutdownTimeout() time.Duration {
@@ -150,6 +124,9 @@ func (p *p) Shutdown(ctx context.Context, code int) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	case err := <-ch:
+		if err == nil {
+			logger.Debug("database connection closed")
+		}
 		return err
 	}
 }

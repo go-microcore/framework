@@ -15,6 +15,6 @@ func New(opts ...Option) *logSdk.LoggerProvider {
 		opt(&options)
 	}
 	provider := logSdk.NewLoggerProvider(options...)
-	logger.Debug("provider has been successfully created")
+	logger.Debug("provider created")
 	return provider
 }

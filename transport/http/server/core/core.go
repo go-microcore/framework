@@ -37,7 +37,7 @@ func New(opts ...Option) *fasthttp.Server {
 	}
 
 	logger.Debug(
-		"core has been successfully created",
+		"core created",
 		slog.String("name", core.Name),
 		slog.Int("concurrency", core.Concurrency),
 		slog.Int("read_buffer_size", core.ReadBufferSize),

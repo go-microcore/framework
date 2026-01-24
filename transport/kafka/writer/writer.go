@@ -14,6 +14,6 @@ func New(opts ...Option) *kafka.Writer {
 	for _, opt := range opts {
 		opt(writer)
 	}
-	logger.Info("writer has been successfully created")
+	logger.Debug("writer created")
 	return writer
 }

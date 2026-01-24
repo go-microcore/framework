@@ -55,9 +55,10 @@ func DurDefault(key string, def time.Duration) time.Duration {
 	d, err := time.ParseDuration(v)
 	if err != nil {
 		logger.Warn(
-			"failed to parse duration value",
-			slog.String("key", key),
+			"failed to parse duration value, using default",
 			slog.Any("error", err),
+			slog.String("key", key),
+			slog.Duration("default", def),
 		)
 		return def
 	}

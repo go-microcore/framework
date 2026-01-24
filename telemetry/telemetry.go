@@ -55,6 +55,7 @@ type (
 		GetMetricsHttpHandler() http.Handler
 		GetShutdownTimeout() time.Duration
 		GetShutdownHandler() bool
+		GetSetLogProvider() bool
 		ForceFlush(ctx context.Context) error
 		Shutdown(ctx context.Context, code int) error
 	}
@@ -98,7 +99,7 @@ func New(opts ...Option) Manager {
 
 	if t.shutdownHandler {
 		shutdown.AddHandler(t.Shutdown)
-		logger.Debug("shutdown handler has been successfully registered")
+		logger.Debug("shutdown handler registered")
 	}
 
 	if t.setLogProvider {
@@ -108,20 +109,7 @@ func New(opts ...Option) Manager {
 				otelslog.WithLoggerProvider(t.logProvider),
 			),
 		)
-		logger.Info(
-			"logging backend has been successfully changed to otel",
-			slog.String("instrumentation_name", logProvider.InstrumentationName),
-		)
 	}
-
-	logger.Info(
-		"manager has been successfully created",
-		slog.Group("shutdown",
-			slog.Duration("timeout", t.shutdownTimeout),
-			slog.Bool("handler", t.shutdownHandler),
-		),
-		slog.Bool("default_log_provider", t.setLogProvider),
-	)
 
 	return t
 }
@@ -252,6 +240,10 @@ func (t *t) GetShutdownTimeout() time.Duration {
 
 func (t *t) GetShutdownHandler() bool {
 	return t.shutdownHandler
+}
+
+func (t *t) GetSetLogProvider() bool {
+	return t.setLogProvider
 }
 
 func (t *t) ForceFlush(ctx context.Context) error {

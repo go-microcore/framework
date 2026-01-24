@@ -55,9 +55,10 @@ func IntDefault(key string, def int) int {
 	i, err := strconv.Atoi(v)
 	if err != nil {
 		logger.Warn(
-			"failed to parse int value",
-			slog.String("key", key),
+			"failed to parse int value, using default",
 			slog.Any("error", err),
+			slog.String("key", key),
+			slog.Int("default", def),
 		)
 		return def
 	}

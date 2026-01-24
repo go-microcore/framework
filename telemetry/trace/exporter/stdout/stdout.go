@@ -29,7 +29,7 @@ func New(opts ...Option) trace.SpanExporter {
 		shutdown.Exit(shutdown.ExitUnavailable)
 	}
 
-	logger.Debug("exporter has been successfully created")
+	logger.Debug("exporter created")
 
 	return exporter
 }

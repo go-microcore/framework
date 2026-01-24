@@ -55,16 +55,8 @@ func New(opts ...Option) Manager {
 
 	if r.shutdownHandler {
 		shutdown.AddHandler(r.Shutdown)
-		logger.Debug("shutdown handler has been successfully registered")
+		logger.Debug("shutdown handler registered")
 	}
-
-	logger.Info(
-		"manager has been successfully created",
-		slog.Group("shutdown",
-			slog.Duration("timeout", r.shutdownTimeout),
-			slog.Bool("handler", r.shutdownHandler),
-		),
-	)
 
 	return r
 }
@@ -85,22 +77,12 @@ func (r *r) SetClient(client *redis.Client) Manager {
 func (r *r) SetTelemetryManager(telemetry telemetry.Manager) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	if err := redisotel.InstrumentTracing(
+	return redisotel.InstrumentTracing(
 		r.client,
 		redisotel.WithTracerProvider(
 			telemetry.GetTraceProvider(),
 		),
-	); err != nil {
-		logger.Error(
-			"failed to use otel tracing",
-			slog.Any("error", err),
-		)
-		return err
-	}
-
-	logger.Info("otel tracing has been successfully initialized")
-	return nil
+	)
 }
 
 func (r *r) GetShutdownTimeout() time.Duration {
@@ -129,6 +111,9 @@ func (r *r) Shutdown(ctx context.Context, code int) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	case err := <-ch:
+		if err == nil {
+			logger.Debug("database connection closed")
+		}
 		return err
 	}
 }
