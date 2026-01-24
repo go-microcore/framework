@@ -218,6 +218,8 @@ func exit(code int) {
 			"exit",
 			slog.Int("code", code),
 		)
+		os.Stdout.Sync()
+		os.Stderr.Sync()
 		s.exit <- code
 		close(s.exit)
 		close(s.code)
