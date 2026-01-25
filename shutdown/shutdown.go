@@ -221,7 +221,5 @@ func exit(code int) {
 		os.Stdout.Sync()
 		os.Stderr.Sync()
 		s.exit <- code
-		close(s.exit)
-		close(s.code)
 	})
 }
