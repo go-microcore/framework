@@ -269,9 +269,9 @@ func (s *server) Listen() <-chan error {
 							ctx,
 							slog.LevelInfo,
 							"request",
+							slog.Int("status", c.Response.StatusCode()),
 							slog.String("method", string(c.Method())),
 							slog.String("path", string(c.Path())),
-							slog.Int("status", c.Response.StatusCode()),
 						)
 					}()
 					handler(c)

@@ -103,6 +103,10 @@ func New(opts ...Option) Manager {
 	}
 
 	if t.setLogProvider {
+		logger.Info(
+			"switching logger to telemetry",
+			slog.String("provider", logProvider.InstrumentationName),
+		)
 		slog.SetDefault(
 			otelslog.NewLogger(
 				logProvider.InstrumentationName,

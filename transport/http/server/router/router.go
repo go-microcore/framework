@@ -35,10 +35,6 @@ func New(opts ...Option) *router.Router {
 		slog.Bool("redirect_fixed_path", router.RedirectFixedPath),
 		slog.Bool("handle_method_not_allowed", router.HandleMethodNotAllowed),
 		slog.Bool("handle_options", router.HandleOPTIONS),
-		slog.Any("global_options", router.GlobalOPTIONS),
-		slog.Any("not_found", router.NotFound),
-		slog.Any("method_not_allowed", router.MethodNotAllowed),
-		slog.Any("panic_handler", router.PanicHandler),
 	)
 
 	return router

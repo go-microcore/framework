@@ -207,7 +207,7 @@ func handlers(code int) bool {
 		logger.Warn("handlers timed out")
 		return false
 	case <-done:
-		logger.Info("all handlers completed")
+		logger.Debug("all handlers completed")
 		return success.Load()
 	}
 }
