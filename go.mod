@@ -11,6 +11,7 @@ require (
 	github.com/redis/go-redis/extra/redisotel/v9 v9.13.0
 	github.com/redis/go-redis/v9 v9.13.0
 	github.com/segmentio/kafka-go v0.4.49
+	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/fasthttp-swagger v1.0.2
 	github.com/valyala/fasthttp v1.65.0
 	go.opentelemetry.io/contrib/bridges/otelslog v0.13.0

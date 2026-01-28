@@ -13,7 +13,7 @@ type severity struct{}
 
 func (s severity) Severity() otelLog.Severity {
 	var sev minsev.Severity
-	_ = sev.UnmarshalText([]byte(log.Level().String()))
+	_ = sev.UnmarshalText([]byte(log.GetLevel().String()))
 	return sev.Severity()
 }
 
