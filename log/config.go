@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	DefaultWriter            = os.Stdout
+	DefaultWriter            = os.Stderr
 	DefaultTimeFormat        = time.StampMilli
 	DefaultPrettyReplaceAttr = func(groups []string, a slog.Attr) slog.Attr {
 		if a.Key == "pkg" {
