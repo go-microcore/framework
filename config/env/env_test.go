@@ -70,8 +70,6 @@ func TestNew(t *testing.T) {
 
 func TestBool(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_BOOL") })
-
 		os.Unsetenv("MY_BOOL")
 		b, err := Bool("MY_BOOL")
 		require.False(t, b)
@@ -108,8 +106,6 @@ func TestBool(t *testing.T) {
 
 func TestBoolDefault(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_BOOL") })
-
 		os.Unsetenv("MY_BOOL")
 		require.True(t, BoolDefault("MY_BOOL", true))
 		require.False(t, BoolDefault("MY_BOOL", false))
@@ -142,11 +138,9 @@ func TestBoolDefault(t *testing.T) {
 
 func TestInt(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_INT") })
-
 		os.Unsetenv("MY_INT")
 		i, err := Int("MY_INT")
-		require.Equal(t, 0, i)
+		require.Equal(t, int(0), i)
 		require.ErrorContains(t, err, "variable MY_INT is not set")
 	})
 
@@ -156,7 +150,7 @@ func TestInt(t *testing.T) {
 		os.Setenv("MY_INT", "31337")
 		i, err := Int("MY_INT")
 		require.NoError(t, err)
-		require.Equal(t, 31337, i)
+		require.Equal(t, int(31337), i)
 	})
 
 	t.Run("set invalid", func(t *testing.T) {
@@ -164,34 +158,85 @@ func TestInt(t *testing.T) {
 
 		os.Setenv("MY_INT", "notanumber")
 		i, err := Int("MY_INT")
-		require.Equal(t, 0, i)
+		require.Equal(t, int(0), i)
 		require.ErrorContains(t, err, "failed to parse MY_INT int value")
 	})
 }
 
 func TestIntDefault(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_INT") })
-
 		os.Unsetenv("MY_INT")
-		require.Equal(t, 31337, IntDefault("MY_INT", 31337))
-		require.Equal(t, 0, IntDefault("MY_INT", 0))
+		require.Equal(t, int(31337), IntDefault("MY_INT", 31337))
+		require.Equal(t, int(0), IntDefault("MY_INT", 0))
 	})
 
 	t.Run("set valid", func(t *testing.T) {
 		t.Cleanup(func() { os.Unsetenv("MY_INT") })
 
 		os.Setenv("MY_INT", "31337")
-		require.Equal(t, 31337, IntDefault("MY_INT", 0))
-		require.Equal(t, 31337, IntDefault("MY_INT", 123))
+		require.Equal(t, int(31337), IntDefault("MY_INT", 0))
+		require.Equal(t, int(31337), IntDefault("MY_INT", 123))
 	})
 
 	t.Run("set invalid", func(t *testing.T) {
 		t.Cleanup(func() { os.Unsetenv("MY_INT") })
 
 		os.Setenv("MY_INT", "invalid")
-		require.Equal(t, 31337, IntDefault("MY_INT", 31337))
-		require.Equal(t, 0, IntDefault("MY_INT", 0))
+		require.Equal(t, int(31337), IntDefault("MY_INT", 31337))
+		require.Equal(t, int(0), IntDefault("MY_INT", 0))
+	})
+}
+
+// int64
+
+func TestInt64(t *testing.T) {
+	t.Run("not set", func(t *testing.T) {
+		os.Unsetenv("MY_INT")
+		i, err := Int64("MY_INT")
+		require.Equal(t, int64(0), i)
+		require.ErrorContains(t, err, "variable MY_INT is not set")
+	})
+
+	t.Run("set valid", func(t *testing.T) {
+		t.Cleanup(func() { os.Unsetenv("MY_INT") })
+
+		os.Setenv("MY_INT", "31337")
+		i, err := Int64("MY_INT")
+		require.NoError(t, err)
+		require.Equal(t, int64(31337), i)
+	})
+
+	t.Run("set invalid", func(t *testing.T) {
+		t.Cleanup(func() { os.Unsetenv("MY_INT") })
+
+		os.Setenv("MY_INT", "notanumber")
+		i, err := Int64("MY_INT")
+		require.Equal(t, int64(0), i)
+		require.ErrorContains(t, err, "failed to parse MY_INT int64 value")
+	})
+}
+
+func TestInt64Default(t *testing.T) {
+	t.Run("not set", func(t *testing.T) {
+		os.Unsetenv("MY_INT")
+		require.Equal(t, int64(31337), Int64Default("MY_INT", 31337))
+		require.Equal(t, int64(0), Int64Default("MY_INT", 0))
+	})
+
+	t.Run("set valid", func(t *testing.T) {
+		t.Cleanup(func() { os.Unsetenv("MY_INT") })
+
+		os.Setenv("MY_INT", "31337")
+		require.Equal(t, int64(31337), Int64Default("MY_INT", 0))
+		require.Equal(t, int64(31337), Int64Default("MY_INT", 123))
+	})
+
+	t.Run("set invalid", func(t *testing.T) {
+		t.Cleanup(func() { os.Unsetenv("MY_INT") })
+
+		os.Setenv("MY_INT", "invalid")
+		require.Equal(t, int64(31337), Int64Default("MY_INT", 31337))
+		require.Equal(t, int64(0), Int64Default("MY_INT", 0))
 	})
 }
 
@@ -199,8 +244,6 @@ func TestIntDefault(t *testing.T) {
 
 func TestStr(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_STR") })
-
 		os.Unsetenv("MY_STR")
 		s, err := Str("MY_STR")
 		require.Equal(t, "", s)
@@ -219,8 +262,6 @@ func TestStr(t *testing.T) {
 
 func TestStrDefault(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_STR") })
-
 		os.Unsetenv("MY_STR")
 		require.Equal(t, "default", StrDefault("MY_STR", "default"))
 		require.Equal(t, "", StrDefault("MY_STR", ""))
@@ -238,8 +279,6 @@ func TestStrDefault(t *testing.T) {
 
 func TestDur(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_DUR") })
-
 		os.Unsetenv("MY_DUR")
 		d, err := Dur("MY_DUR")
 		require.Equal(t, time.Duration(0), d)
@@ -267,8 +306,6 @@ func TestDur(t *testing.T) {
 
 func TestDurDefault(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_DUR") })
-
 		os.Unsetenv("MY_DUR")
 		def := 5 * time.Minute
 		require.Equal(t, def, DurDefault("MY_DUR", def))
@@ -294,8 +331,6 @@ func TestDurDefault(t *testing.T) {
 
 func TestBytesHex(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_BYTES") })
-
 		os.Unsetenv("MY_BYTES")
 		b, err := BytesHex("MY_BYTES")
 		require.Nil(t, b)
@@ -325,8 +360,6 @@ func TestBytesHex(t *testing.T) {
 
 func TestBytesHexDefault(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_BYTES") })
-
 		def := []byte("hello world")
 		os.Unsetenv("MY_BYTES")
 		require.Equal(t, def, BytesHexDefault("MY_BYTES", def))
@@ -355,8 +388,6 @@ func TestBytesHexDefault(t *testing.T) {
 
 func TestBytesB64(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_BYTES") })
-
 		os.Unsetenv("MY_BYTES")
 		b, err := BytesB64("MY_BYTES")
 		require.Nil(t, b)
@@ -386,8 +417,6 @@ func TestBytesB64(t *testing.T) {
 
 func TestBytesB64Default(t *testing.T) {
 	t.Run("not set", func(t *testing.T) {
-		t.Cleanup(func() { os.Unsetenv("MY_BYTES") })
-
 		def := []byte("hello world")
 		os.Unsetenv("MY_BYTES")
 		require.Equal(t, def, BytesB64Default("MY_BYTES", def))
@@ -411,4 +440,3 @@ func TestBytesB64Default(t *testing.T) {
 		require.Equal(t, def, BytesB64Default("MY_BYTES", def))
 	})
 }
-

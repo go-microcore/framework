@@ -93,6 +93,42 @@ func IntDefault(key string, def int) int {
 	return i
 }
 
+// int64
+
+func Int64(key string) (int64, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return 0, fmt.Errorf("variable %s is not set", key)
+	}
+
+	i, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse %s int64 value: %w", key, err)
+	}
+
+	return i, nil
+}
+
+func Int64Default(key string, def int64) int64 {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+
+	i, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		slog.Warn(
+			"failed to parse int64 value, using default",
+			slog.Any("error", err),
+			slog.String("key", key),
+			slog.Int64("default", def),
+		)
+		return def
+	}
+
+	return i
+}
+
 // string
 
 func Str(key string) (string, error) {
