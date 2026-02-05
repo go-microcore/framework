@@ -19,65 +19,79 @@ import (
 	"go.microcore.dev/framework/transport/http/server/router"
 )
 
-type Option func(*server)
+type Option func(*server) error
 
 func WithListener(listener net.Listener) Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.listener = listener
+		return nil
 	}
 }
 
 func WithListenerOptions(opts ...listener.Option) Option {
-	return func(s *server) {
-		s.listener = listener.New(opts...)
+	return func(s *server) error {
+		listener, err := listener.New(opts...)
+		if err != nil {
+			return err
+		}
+		s.listener = listener
+		return nil
 	}
 }
 
 func WithCore(core *fasthttp.Server) Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.core = core
+		return nil
 	}
 }
 
 func WithCoreOptions(opts ...core.Option) Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.core = core.New(opts...)
+		return nil
 	}
 }
 
 func WithRouter(router *fasthttpRouter.Router) Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.router = router
+		return nil
 	}
 }
 
 func WithRouterOptions(opts ...router.Option) Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.router = router.New(opts...)
+		return nil
 	}
 }
 
 func WithTelemetryManager(telemetry telemetry.Manager) Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.SetTelemetryManager(telemetry)
+		return nil
 	}
 }
 
 func WithShutdownTimeout(timeout time.Duration) Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.shutdownTimeout = timeout
+		return nil
 	}
 }
 
 func WithoutShutdownHandler() Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.shutdownHandler = false
+		return nil
 	}
 }
 
 func WithTLS(tls *TLS) Option {
-	return func(s *server) {
+	return func(s *server) error {
 		s.tls = tls
+		return nil
 	}
 }
 

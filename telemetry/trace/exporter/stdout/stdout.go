@@ -1,11 +1,10 @@
 package stdout // import "go.microcore.dev/framework/telemetry/trace/exporter/stdout"
 
 import (
-	"log/slog"
+	"fmt"
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
-	"go.microcore.dev/framework/shutdown"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -13,7 +12,7 @@ import (
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) trace.SpanExporter {
+func New(opts ...Option) (trace.SpanExporter, error) {
 	options := []stdouttrace.Option{}
 
 	for _, opt := range opts {
@@ -22,14 +21,10 @@ func New(opts ...Option) trace.SpanExporter {
 
 	exporter, err := stdouttrace.New(options...)
 	if err != nil {
-		logger.Error(
-			"failed to create exporter",
-			slog.Any("error", err),
-		)
-		shutdown.Exit(shutdown.ExitUnavailable)
+		return nil, fmt.Errorf("failed to create exporter: %w", err)
 	}
 
 	logger.Debug("exporter created")
 
-	return exporter
+	return exporter, nil
 }

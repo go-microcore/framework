@@ -1,12 +1,12 @@
 package listener // import "go.microcore.dev/framework/transport/http/server/listener"
 
 import (
+	"fmt"
 	"log/slog"
 	"net"
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
-	"go.microcore.dev/framework/shutdown"
 )
 
 type settings struct {
@@ -15,7 +15,7 @@ type settings struct {
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) net.Listener {
+func New(opts ...Option) (net.Listener, error) {
 	settings := &settings{
 		network:  DefaultListenerNetwork,
 		hostname: DefaultListenerHostname,
@@ -28,14 +28,7 @@ func New(opts ...Option) net.Listener {
 
 	ln, err := net.Listen(settings.network, net.JoinHostPort(settings.hostname, settings.port))
 	if err != nil {
-		logger.Error(
-			"failed to create listener",
-			slog.String("network", settings.network),
-			slog.String("hostname", settings.hostname),
-			slog.String("port", settings.port),
-			slog.Any("error", err),
-		)
-		shutdown.Exit(shutdown.ExitOSError)
+		return nil, fmt.Errorf("failed to create listener: %w", err)
 	}
 
 	logger.Debug(
@@ -45,5 +38,5 @@ func New(opts ...Option) net.Listener {
 		slog.String("port", settings.port),
 	)
 
-	return ln
+	return ln, nil
 }

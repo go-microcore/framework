@@ -2,18 +2,17 @@ package grpc // import "go.microcore.dev/framework/telemetry/log/exporter/otlp/g
 
 import (
 	"context"
-	"log/slog"
+	"fmt"
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
-	"go.microcore.dev/framework/shutdown"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 )
 
 var logger = log.New(pkg)
 
-func New(ctx context.Context, opts ...Option) *otlploggrpc.Exporter {
+func New(ctx context.Context, opts ...Option) (*otlploggrpc.Exporter, error) {
 	options := []otlploggrpc.Option{}
 
 	for _, opt := range opts {
@@ -22,14 +21,10 @@ func New(ctx context.Context, opts ...Option) *otlploggrpc.Exporter {
 
 	exporter, err := otlploggrpc.New(ctx, options...)
 	if err != nil {
-		logger.Error(
-			"failed to create exporter",
-			slog.Any("error", err),
-		)
-		shutdown.Exit(shutdown.ExitUnavailable)
+		return nil, fmt.Errorf("failed to create exporter: %w", err)
 	}
 
 	logger.Debug("exporter created")
 
-	return exporter
+	return exporter, nil
 }

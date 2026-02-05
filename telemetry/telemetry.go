@@ -118,20 +118,46 @@ func New(opts ...Option) Manager {
 	return t
 }
 
-func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string, service string) Manager {
+func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string, service string) (Manager, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		host = "undefined"
 	}
 
+	// Create trace exporter
+	otlpTraceGrpcExporter, err := traceOtlpGrpcExporter.New(
+		ctx,
+		traceOtlpGrpcExporter.WithEndpoint(endpoint),
+		traceOtlpGrpcExporter.WithInsecure(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create metric exporter
+	otlpMetricGrpcExporter, err := metricOtlpGrpcExporter.New(
+		ctx,
+		metricOtlpGrpcExporter.WithEndpoint(endpoint),
+		metricOtlpGrpcExporter.WithInsecure(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create log exporter
+	otlpLogGrpcExporter, err := logOtlpGrpcExporter.New(
+		ctx,
+		logOtlpGrpcExporter.WithEndpoint(endpoint),
+		logOtlpGrpcExporter.WithInsecure(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return New(
 		WithTraceProviderOptions(
 			traceProvider.WithBatcher(
-				traceOtlpGrpcExporter.New(
-					ctx,
-					traceOtlpGrpcExporter.WithEndpoint(endpoint),
-					traceOtlpGrpcExporter.WithInsecure(),
-				),
+				otlpTraceGrpcExporter,
 			),
 			traceProvider.WithSampler(
 				traceSdk.ParentBased(
@@ -161,11 +187,7 @@ func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string, service st
 		WithMetricProviderOptions(
 			metricProvider.WithReader(
 				metricPeriodicReader.New(
-					metricOtlpGrpcExporter.New(
-						ctx,
-						metricOtlpGrpcExporter.WithEndpoint(endpoint),
-						metricOtlpGrpcExporter.WithInsecure(),
-					),
+					otlpMetricGrpcExporter,
 					metricPeriodicReader.WithInterval(DefaultMetricPeriodicReaderInterval),
 					metricPeriodicReader.WithTimeout(DefaultMetricPeriodicReaderTimeout),
 				),
@@ -185,11 +207,7 @@ func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string, service st
 			logProvider.WithProcessor(
 				telemetryLog.NewProcessor(
 					logSdk.NewBatchProcessor(
-						logOtlpGrpcExporter.New(
-							ctx,
-							logOtlpGrpcExporter.WithEndpoint(endpoint),
-							logOtlpGrpcExporter.WithInsecure(),
-						),
+						otlpLogGrpcExporter,
 						logSdk.WithExportInterval(DefaultLogExportInterval),
 						logSdk.WithExportTimeout(DefaultLogExportTimeout),
 					),
@@ -203,7 +221,7 @@ func NewDefaultInsecureOtlpGrpc(ctx context.Context, endpoint string, service st
 				),
 			),
 		),
-	)
+	), nil
 }
 
 func (t *t) GetTraceProvider() *traceSdk.TracerProvider {

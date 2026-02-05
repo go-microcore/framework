@@ -39,18 +39,24 @@ type (
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) Manager {
+func New(opts ...Option) (Manager, error) {
 	p := &p{
 		shutdownTimeout: DefaultShutdownTimeout,
 		shutdownHandler: DefaultShutdownHandler,
 	}
 
 	for _, opt := range opts {
-		opt(p)
+		if err := opt(p); err != nil {
+			return nil, err
+		}
 	}
 
 	if p.client == nil {
-		p.client = client.New()
+		client, err := client.New()
+		if err != nil {
+			return nil, err
+		}
+		p.client = client
 	}
 
 	if p.shutdownHandler {
@@ -58,7 +64,7 @@ func New(opts ...Option) Manager {
 		logger.Debug("shutdown handler registered")
 	}
 
-	return p
+	return p, nil
 }
 
 func (p *p) Client() *gorm.DB {

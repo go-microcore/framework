@@ -1,11 +1,11 @@
 package client // import "go.microcore.dev/framework/db/postgres/client"
 
 import (
+	"fmt"
 	"log/slog"
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
-	"go.microcore.dev/framework/shutdown"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -18,7 +18,7 @@ type config struct {
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) *gorm.DB {
+func New(opts ...Option) (*gorm.DB, error) {
 	config := &config{
 		postgres: postgres.Config{},
 		gorm:     &gorm.Config{},
@@ -33,11 +33,7 @@ func New(opts ...Option) *gorm.DB {
 		config.gorm,
 	)
 	if err != nil {
-		logger.Error(
-			"failed to create client",
-			slog.Any("error", err),
-		)
-		shutdown.Exit(shutdown.ExitUnavailable)
+		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
 
 	logger.Debug(
@@ -70,5 +66,5 @@ func New(opts ...Option) *gorm.DB {
 		),
 	)
 
-	return client
+	return client, nil
 }

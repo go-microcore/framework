@@ -92,18 +92,24 @@ type (
 
 var logger = log.New(pkg)
 
-func New(opts ...Option) Manager {
+func New(opts ...Option) (Manager, error) {
 	server := &server{
 		shutdownTimeout: DefaultShutdownTimeout,
 		shutdownHandler: DefaultShutdownHandler,
 	}
 
 	for _, opt := range opts {
-		opt(server)
+		if err := opt(server); err != nil {
+			return nil, err
+		}
 	}
 
 	if server.listener == nil {
-		server.listener = listener.New()
+		listener, err := listener.New()
+		if err != nil {
+			return nil, err
+		}
+		server.listener = listener
 	}
 
 	if server.core == nil {
@@ -119,7 +125,7 @@ func New(opts ...Option) Manager {
 		logger.Debug("shutdown handler registered")
 	}
 
-	return server
+	return server, nil
 }
 
 func (s *server) SetListener(listener net.Listener) Manager {
