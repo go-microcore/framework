@@ -1,5 +1,37 @@
 package shutdown // import "go.microcore.dev/framework/shutdown"
 
+import "fmt"
+
+// ExitError represents an error that carries an exit code for program termination.
+// It wraps an underlying error, allowing both the error message and the exit code
+// to be propagated together.
+//
+// Use ExitErr(code, err) to create an ExitError. The wrapped error can be nil
+// if you only want to convey the exit code without an actual error.
+
+type ExitError struct {
+	Code int
+	Err  error
+}
+
+func (e *ExitError) Error() string {
+	if e.Err == nil {
+		return fmt.Sprintf("exit code: %d", e.Code)
+	}
+	return e.Err.Error()
+}
+
+func (e *ExitError) Unwrap() error {
+	return e.Err
+}
+
+func ExitErr(err error, code int) error {
+	return &ExitError{
+		Code: code,
+		Err:  err,
+	}
+}
+
 // These constants are intended to be used as a stable contract between
 // Go applications and their execution environment (OS, Docker, Kubernetes,
 // systemd, CI/CD pipelines, supervisors).
