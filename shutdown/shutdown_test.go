@@ -99,48 +99,30 @@ func TestManager_AddHandler_AfterShutdown(t *testing.T) {
 func TestManager_Wait_Success(t *testing.T) {
 	m := newManager().(*manager)
 
-	origExit := exitFunc
-	defer func() {
-		exitFunc = origExit
+	exit := make(chan int, 1)
+
+	go func (){
+		exit <- m.Wait()
 	}()
-
-	called := make(chan int, 1)
-
-	exitFunc = func(code int) {
-		called <- code
-	}
-
-	go m.Wait()
 
 	expectedCode := ExitOK
 	m.exit <- expectedCode
 
 	select {
-	case code := <-called:
+	case code := <-exit:
 		require.Equal(t, expectedCode, code)
 	case <-time.After(100 * time.Millisecond):
-		t.Fatal("exitFunc was not called")
+		t.Fatal("timeout")
 	}
 }
 
 func TestManager_Wait_Blocks(t *testing.T) {
 	m := newManager().(*manager)
 
-	origExit := exitFunc
-	defer func() { exitFunc = origExit }()
-
-	exitFunc = func(code int) {
-		t.Fatal("exitFunc should not be called")
-	}
-
-	done := make(chan struct{})
-	go func() {
-		m.Wait()
-		close(done)
-	}()
+	go m.Wait()
 
 	select {
-	case <-done:
+	case <-m.exit:
 		t.Fatal("Wait returned without exit code")
 	case <-time.After(100 * time.Millisecond):
 	}
@@ -194,29 +176,18 @@ func TestManager_Shutdown_ChannelBlocked(t *testing.T) {
 func TestManager_Exit(t *testing.T) {
 	m := newManager().(*manager)
 
-	var calledCode int
-	exitCalled := make(chan struct{}, 1)
-
-	origExit := exitFunc
-	exitFunc = func(code int) {
-		calledCode = code
-		exitCalled <- struct{}{}
-	}
-	defer func() { exitFunc = origExit }()
-
-	select {
-	case <-m.code:
-	default:
-	}
-
+	exit := make(chan int, 1)
 	expectedCode := ExitOK
-	m.Exit(expectedCode)
+	
+	go func(){
+		exit <- m.Exit(expectedCode)
+	}()
 
 	select {
-	case <-exitCalled:
-		require.Equal(t, expectedCode, calledCode)
-	case <-time.After(time.Second):
-		t.Fatal("exitFunc was not called")
+	case code := <-exit:
+		require.Equal(t, expectedCode, code)
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timeout")
 	}
 }
 

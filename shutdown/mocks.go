@@ -136,9 +136,20 @@ func (_c *MockManager_Context_Call) RunAndReturn(run func() context.Context) *Mo
 }
 
 // Exit provides a mock function for the type MockManager
-func (_mock *MockManager) Exit(code int) {
-	_mock.Called(code)
-	return
+func (_mock *MockManager) Exit(code int) int {
+	ret := _mock.Called(code)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Exit")
+	}
+
+	var r0 int
+	if returnFunc, ok := ret.Get(0).(func(int) int); ok {
+		r0 = returnFunc(code)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	return r0
 }
 
 // MockManager_Exit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exit'
@@ -165,13 +176,13 @@ func (_c *MockManager_Exit_Call) Run(run func(code int)) *MockManager_Exit_Call 
 	return _c
 }
 
-func (_c *MockManager_Exit_Call) Return() *MockManager_Exit_Call {
-	_c.Call.Return()
+func (_c *MockManager_Exit_Call) Return(n int) *MockManager_Exit_Call {
+	_c.Call.Return(n)
 	return _c
 }
 
-func (_c *MockManager_Exit_Call) RunAndReturn(run func(code int)) *MockManager_Exit_Call {
-	_c.Run(run)
+func (_c *MockManager_Exit_Call) RunAndReturn(run func(code int) int) *MockManager_Exit_Call {
+	_c.Call.Return(run)
 	return _c
 }
 
@@ -344,9 +355,20 @@ func (_c *MockManager_Shutdown_Call) RunAndReturn(run func(code int)) *MockManag
 }
 
 // Wait provides a mock function for the type MockManager
-func (_mock *MockManager) Wait() {
-	_mock.Called()
-	return
+func (_mock *MockManager) Wait() int {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Wait")
+	}
+
+	var r0 int
+	if returnFunc, ok := ret.Get(0).(func() int); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	return r0
 }
 
 // MockManager_Wait_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Wait'
@@ -366,13 +388,13 @@ func (_c *MockManager_Wait_Call) Run(run func()) *MockManager_Wait_Call {
 	return _c
 }
 
-func (_c *MockManager_Wait_Call) Return() *MockManager_Wait_Call {
-	_c.Call.Return()
+func (_c *MockManager_Wait_Call) Return(n int) *MockManager_Wait_Call {
+	_c.Call.Return(n)
 	return _c
 }
 
-func (_c *MockManager_Wait_Call) RunAndReturn(run func()) *MockManager_Wait_Call {
-	_c.Run(run)
+func (_c *MockManager_Wait_Call) RunAndReturn(run func() int) *MockManager_Wait_Call {
+	_c.Call.Return(run)
 	return _c
 }
 

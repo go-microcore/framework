@@ -45,7 +45,7 @@ Lifecycle of the Manager:
    - Final state after shutdown completes.
    - Actions:
        • Log the shutdown completion and exit code.
-       • Exit the application.
+       • Save exit code.
    - After this, any calls to the manager are invalid or will result in errors.
 
 Key points:
@@ -86,6 +86,7 @@ type (
 		code     chan int
 		catch    chan os.Signal
 		handlers []Handler
+		res      int
 		once     sync.Once
 		mu       sync.Mutex
 		ctx      struct {
@@ -100,7 +101,6 @@ var (
 	defaultManager Manager
 	defaultState   atomic.Int32
 	timeout        time.Duration
-	exitFunc       func(code int)
 	logger         *slog.Logger
 	once           sync.Once
 )
@@ -108,7 +108,6 @@ var (
 func init() {
 	defaultState.Store(int32(stateInit))
 	timeout = defaultShutdownTimeout
-	exitFunc = os.Exit
 	logger = log.New(pkg)
 }
 
@@ -161,21 +160,27 @@ func (m *manager) AddHandler(handler Handler) error {
 	return nil
 }
 
-func (m *manager) Wait() {
-	exitFunc(<-m.exit)
+func (m *manager) Wait() int {
+	if m.state.Load() == int32(stateExited) {
+		return m.res
+	}
+	return <-m.exit
 }
 
 func (m *manager) Shutdown(code int) {
+	if m.state.Load() == int32(stateExited) {
+		return
+	}
 	select {
 	case m.code <- code:
 	default:
-		logger.Warn("code not sent: channel blocked")
+		logger.Warn("channel blocked")
 	}
 }
 
-func (m *manager) Exit(code int) {
+func (m *manager) Exit(code int) int {
 	m.Shutdown(code)
-	m.Wait()
+	return m.Wait()
 }
 
 func (m *manager) Recover() {
@@ -281,6 +286,7 @@ func (m *manager) exec(code int) bool {
 
 func (m *manager) term(code int) {
 	m.once.Do(func() {
+		m.res = code
 		m.state.Store(int32(stateExited))
 		logger.Info(
 			"exit",
@@ -289,6 +295,8 @@ func (m *manager) term(code int) {
 		os.Stdout.Sync()
 		os.Stderr.Sync()
 		m.exit <- code
+		close(m.code)
+		close(m.exit)
 	})
 }
 
@@ -446,19 +454,25 @@ func AddHandler(handler Handler) error {
 	return def().AddHandler(handler)
 }
 
-// Wait blocks the current goroutine until a shutdown signal is received.
+// Wait blocks the current goroutine until a shutdown signal is received
+// and returns the resulting exit code.
 //
-// This function keeps the application running until a termination signal is triggered.
+// This function keeps the application running until a shutdown is initiated.
 // It waits for one of the following events:
 //   - A call to Shutdown() or Exit() within the application code.
 //   - Receiving an OS termination signal (SIGINT, SIGTERM, SIGQUIT).
 //
 // How it works:
 //
-//  1. The function blocks until a shutdown code is sent to the exit channel.
-//  2. Once the code is received, it immediately calls os.Exit(code) to terminate the process.
-//  3. Any registered shutdown handlers are executed before the exit code is sent,
-//     as Shutdown/Exit triggers them beforehand.
+//  1. The function blocks until an exit code is sent to the internal exit channel.
+//  2. Once the code is received, it is returned to the caller.
+//  3. The function does NOT terminate the process itself.
+//
+// Any registered shutdown handlers are executed before the exit code becomes available,
+// as Shutdown/Exit triggers them beforehand.
+//
+// It is the caller’s responsibility to decide how to handle the returned exit code
+// (for example, by passing it to os.Exit in the application's entry point).
 //
 // Example:
 //
@@ -472,11 +486,12 @@ func AddHandler(handler Handler) error {
 //	        return nil
 //	    })
 //
-//	    // Wait for shutdown signal
-//	    shutdown.Wait() // Blocks until Shutdown/Exit is called or SIGINT/SIGTERM/SIGQUIT is received
+//	    // Wait for shutdown signal and handle exit code explicitly
+//	    code := shutdown.Wait()
+//	    os.Exit(code)
 //	}
-func Wait() {
-	def().Wait()
+func Wait() int {
+	return def().Wait()
 }
 
 // Shutdown initiates program termination with the specified exit code.
@@ -508,26 +523,33 @@ func Shutdown(code int) {
 	def().Shutdown(code)
 }
 
-// Exit initiates application termination with the specified exit code.
+// Exit initiates the application shutdown process with the specified exit code
+// and returns the resulting exit code once shutdown is complete.
 //
-// This function starts the application shutdown process:
-//  1. Triggers a graceful shutdown via Shutdown(code), notifying all registered
-//     handlers and cancelling the root context.
-//  2. Blocks the current goroutine until all shutdown handlers have finished their work.
-//  3. After all handlers complete, the application immediately exits with the given code.
+// This function performs the following steps:
+//  1. Initiates a graceful shutdown via Shutdown(code), notifying all registered
+//     shutdown handlers and cancelling the root context.
+//  2. Blocks the current goroutine until the shutdown process completes.
+//  3. Returns the final exit code to the caller.
+//
+// Exit does NOT terminate the process itself.
+// It is intended to be used as a convenience helper for initiating shutdown
+// and propagating the exit code to the application entry point.
 //
 // Important:
 //
-// - Exit does not return until the entire shutdown process is complete.
-// - It is used for final application termination in controlled situations.
+//   - Exit blocks until all shutdown handlers have finished executing.
+//   - The caller is responsible for performing the actual process termination
+//     (for example, by calling os.Exit with the returned code).
 //
 // Example:
 //
-//		// Terminate the application with exit code 0 (shutdown.ExitOK) after all shutdown
-//	 // handlers finish
-//		shutdown.Exit(shutdown.ExitOK)
-func Exit(code int) {
-	def().Exit(code)
+//	func main() {
+//	    code := shutdown.Exit(shutdown.ExitOK)
+//	    os.Exit(code)
+//	}
+func Exit(code int) int {
+	return def().Exit(code)
 }
 
 // Recover intercepts panics that occur in the application, logs them, and initiates a

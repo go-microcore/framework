@@ -10,9 +10,9 @@ type Manager interface {
 	WithContext(parent context.Context) (context.Context, error)
 	Context() context.Context
 	AddHandler(handler Handler) error
-	Wait()
+	Wait() int
 	Shutdown(code int)
-	Exit(code int)
+	Exit(code int) int
 	Recover()
 	SetShutdownTimeout(t time.Duration)
 }
