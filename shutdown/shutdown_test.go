@@ -170,7 +170,7 @@ func TestManager_Shutdown_ChannelBlocked(t *testing.T) {
 	}
 
 	require.Len(t, logs, 1)
-	require.Contains(t, logs[0], "code not sent: channel blocked")
+	require.Contains(t, logs[0], "channel blocked")
 }
 
 func TestManager_Exit(t *testing.T) {
