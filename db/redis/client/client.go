@@ -11,6 +11,10 @@ import (
 
 var logger = log.New(pkg)
 
+func init() {
+	redis.SetLogger(NewRedisLogger(logger))
+}
+
 func New(opts ...Option) *redis.Client {
 	options := &redis.Options{
 		Network:    defaultNetwork,
