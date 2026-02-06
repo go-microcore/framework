@@ -3,6 +3,7 @@ package shutdown
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
@@ -316,6 +317,72 @@ func TestManager_HandlerTimeout(t *testing.T) {
 	code := <-m.exit
 	require.Equal(t, ExitShutdownError, code)
 }
+
+func TestNewExitReason(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		reason     error
+		wantCode   int
+		wantHasErr bool
+		wantErrMsg string
+	}{
+		{
+			name:       "Only exit code, no error",
+			reason:     NewExitReason(ExitUnavailable),
+			wantCode:   ExitUnavailable,
+			wantHasErr: false,
+			wantErrMsg: "exit code: 69",
+		},
+		{
+			name:       "Exit code with single error",
+			reason:     NewExitReason(ExitSoftware, errors.New("failed to initialize DB")),
+			wantCode:   ExitSoftware,
+			wantHasErr: true,
+			wantErrMsg: "failed to initialize DB",
+		},
+		{
+			name: "Nested ExitReasons",
+			reason: func() error {
+				inner := NewExitReason(ExitUnavailable, errors.New("inner error"))
+				return NewExitReason(ExitSoftware, fmt.Errorf("outer error: %w", inner))
+			}(),
+			wantCode:   ExitUnavailable,
+			wantHasErr: true,
+			wantErrMsg: "outer error: inner error",
+		},
+		{
+			name:       "Normal error, no ExitReason",
+			reason:     errors.New("just a normal error"),
+			wantCode:   ExitGeneralError,
+			wantHasErr: true,
+			wantErrMsg: "just a normal error",
+		},
+		{
+			name:       "Multiple errors joined",
+			reason:     NewExitReason(ExitSoftware, errors.New("err1"), errors.New("err2")),
+			wantCode:   ExitSoftware,
+			wantHasErr: true,
+			wantErrMsg: "err1\nerr2", // errors.Join joins with newline by default
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, hasErr := ParseExitReason(tt.reason)
+			if code != tt.wantCode {
+				t.Errorf("ParseExitReason() code = %d, want %d", code, tt.wantCode)
+			}
+			if hasErr != tt.wantHasErr {
+				t.Errorf("ParseExitReason() hasErr = %v, want %v", hasErr, tt.wantHasErr)
+			}
+			if tt.reason.Error() != tt.wantErrMsg {
+				t.Errorf("Error() = %q, want %q", tt.reason.Error(), tt.wantErrMsg)
+			}
+		})
+	}
+}
+
 
 type mockWriter struct {
 	logs *[]string

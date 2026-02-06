@@ -1,35 +1,107 @@
 package shutdown // import "go.microcore.dev/framework/shutdown"
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
-// ExitError represents an error that carries an exit code for program termination.
+// ExitReason represents an error that carries an exit code for program termination.
 // It wraps an underlying error, allowing both the error message and the exit code
-// to be propagated together.
-//
-// Use ExitErr(code, err) to create an ExitError. The wrapped error can be nil
-// if you only want to convey the exit code without an actual error.
+// to be propagated together. Use NewExitReason(code, err) to create an ExitReason.
 
-type ExitError struct {
+type ExitReason struct {
 	Code int
 	Err  error
 }
 
-func (e *ExitError) Error() string {
+func (e *ExitReason) Error() string {
 	if e.Err == nil {
 		return fmt.Sprintf("exit code: %d", e.Code)
 	}
 	return e.Err.Error()
 }
 
-func (e *ExitError) Unwrap() error {
+func (e *ExitReason) Unwrap() error {
 	return e.Err
 }
 
-func ExitErr(err error, code int) error {
-	return &ExitError{
+// NewExitReason creates a new program termination reason with the specified exit code.
+//
+// ExitReason represents a reason for program termination. It can wrap underlying errors (if provided)
+// and associates them with a machine-readable exit code. This is useful for CLI applications or services
+// where the process exit code matters (for orchestration, CI/CD, or supervisors).
+//
+// The underlying errors `errs` can be omitted if you only want to signal an exit code
+// without providing actual error messages.
+//
+// Example:
+//
+//	// Exit with a software error and a descriptive message
+//	return NewExitReason(ExitSoftware, fmt.Errorf("failed to initialize database"))
+//
+//	// Exit with just a code, no underlying error
+//	return NewExitReason(ExitUnavailable)
+func NewExitReason(code int, errs ...error) error {
+	return &ExitReason{
 		Code: code,
-		Err:  err,
+		Err:  errors.Join(errs...),
 	}
+}
+
+// ParseExitReason extracts the exit code and error presence from a wrapped ExitReason.
+//
+// This function recursively unwraps the provided error `e` looking for ExitReason instances.
+// It returns two values:
+//   - code: the most relevant exit code found (defaults to ExitGeneralError if none found)
+//   - hasErr: true if there is an actual underlying error, false if the ExitReason was just signaling a code
+//
+// ParseExitReason is intended for CLI applications or services that need to translate
+// error chains into appropriate exit codes for process termination.
+//
+// Example usage:
+//
+//	// Simple case: just an ExitReason with a code
+//	reason := NewExitReason(ExitUnavailable)
+//	code, hasErr := ParseExitReason(reason)
+//	fmt.Println(code, hasErr) // Output: ExitUnavailable, false
+//	fmt.Println(reason.Error()) // Output: exit code: 69
+//
+//	// ExitReason wrapping an underlying error
+//	reason = NewExitReason(ExitSoftware, fmt.Errorf("failed to initialize database"))
+//	code, hasErr = ParseExitReason(reason)
+//	fmt.Println(code, hasErr) // Output: ExitSoftware, true
+//	fmt.Println(reason.Error()) // Output: failed to initialize database
+//
+//	// Nested ExitReasons: inner ExitReason can be preserved
+//	reason1 := NewExitReason(ExitUnavailable, fmt.Errorf("reason1"))
+//	reason2 := NewExitReason(ExitSoftware, fmt.Errorf("reason2: %w", reason1))
+//	code, hasErr = ParseExitReason(reason2)
+//	fmt.Println(code, hasErr) // Output: ExitUnavailable, true
+//	fmt.Println(reason2.Error()) // Output: reason2: reason1
+//
+//	// No ExitReason in chain: defaults to general error
+//	err := fmt.Errorf("just a normal error")
+//	code, hasErr = ParseExitReason(err)
+//	fmt.Println(code, hasErr) // Output: ExitGeneralError, true
+//	fmt.Println(err.Error()) // Output: just a normal error
+//
+// Use this function whenever you need a single exit code for the process while still
+// capturing whether there was an actual error message to log or display.
+func ParseExitReason(e error) (int, bool) {
+	code := ExitGeneralError // default exit code
+	err := true              // default error state
+	cur := e
+	for cur != nil {
+		ee := &ExitReason{}
+		if errors.As(cur, &ee) {
+			code = ee.Code
+			err = ee.Err != nil
+			cur = ee.Err
+			continue
+		}
+		cur = nil
+	}
+	return code, err
 }
 
 // These constants are intended to be used as a stable contract between
