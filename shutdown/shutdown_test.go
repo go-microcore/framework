@@ -11,6 +11,7 @@ import (
 )
 
 func TestManager_NewContext(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	ctx, err := m.NewContext()
@@ -22,6 +23,7 @@ func TestManager_NewContext(t *testing.T) {
 }
 
 func TestManager_NewContext_Twice(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	_, err := m.NewContext()
@@ -32,6 +34,7 @@ func TestManager_NewContext_Twice(t *testing.T) {
 }
 
 func TestManager_WithContext_CustomParent(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	type ctxKey string
@@ -47,6 +50,7 @@ func TestManager_WithContext_CustomParent(t *testing.T) {
 }
 
 func TestManager_WithContext_NilParent(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	//lint:ignore SA1012 WithContext with nil
@@ -55,6 +59,7 @@ func TestManager_WithContext_NilParent(t *testing.T) {
 }
 
 func TestManager_Context_ReturnsExistingContext(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	ctx, err := m.NewContext()
@@ -65,6 +70,7 @@ func TestManager_Context_ReturnsExistingContext(t *testing.T) {
 }
 
 func TestManager_Context_ReturnsBackgroundIfNotInitialized(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	ctx := m.Context()
@@ -73,6 +79,7 @@ func TestManager_Context_ReturnsBackgroundIfNotInitialized(t *testing.T) {
 }
 
 func TestManager_AddHandler_BeforeShutdown(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	err := m.AddHandler(func(ctx context.Context, code int) error {
@@ -83,6 +90,7 @@ func TestManager_AddHandler_BeforeShutdown(t *testing.T) {
 }
 
 func TestManager_AddHandler_AfterShutdown(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	m.Shutdown(ExitOK)
@@ -97,6 +105,7 @@ func TestManager_AddHandler_AfterShutdown(t *testing.T) {
 }
 
 func TestManager_Wait_Success(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	exit := make(chan int, 1)
@@ -117,6 +126,7 @@ func TestManager_Wait_Success(t *testing.T) {
 }
 
 func TestManager_Wait_Blocks(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	go m.Wait()
@@ -129,6 +139,7 @@ func TestManager_Wait_Blocks(t *testing.T) {
 }
 
 func TestManager_Shutdown_SendsCode(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	var logs []string
@@ -150,6 +161,7 @@ func TestManager_Shutdown_SendsCode(t *testing.T) {
 }
 
 func TestManager_Shutdown_ChannelBlocked(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	tmpCode := ExitGeneralError
@@ -174,6 +186,7 @@ func TestManager_Shutdown_ChannelBlocked(t *testing.T) {
 }
 
 func TestManager_Exit(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	exit := make(chan int, 1)
@@ -192,6 +205,7 @@ func TestManager_Exit(t *testing.T) {
 }
 
 func TestManager_SetShutdownTimeout(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	origTimeout := timeout
@@ -218,6 +232,7 @@ func TestSetDefaultManager_AfterDefault(t *testing.T) {
 }
 
 func TestManager_ContextCanceledOnShutdown(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	ctx, err := m.NewContext()
@@ -239,6 +254,7 @@ func TestManager_ContextCanceledOnShutdown(t *testing.T) {
 }
 
 func TestManager_HandlerSuccess(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	called := false
@@ -257,6 +273,7 @@ func TestManager_HandlerSuccess(t *testing.T) {
 }
 
 func TestManager_HandlerError(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	m.AddHandler(func(ctx context.Context, code int) error {
@@ -270,6 +287,7 @@ func TestManager_HandlerError(t *testing.T) {
 }
 
 func TestManager_HandlerPanic(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	m.AddHandler(func(ctx context.Context, code int) error {
@@ -283,6 +301,7 @@ func TestManager_HandlerPanic(t *testing.T) {
 }
 
 func TestManager_HandlerTimeout(t *testing.T) {
+	t.Parallel()
 	m := newManager().(*manager)
 
 	m.SetShutdownTimeout(100 * time.Millisecond)
