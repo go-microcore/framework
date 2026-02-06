@@ -3,12 +3,14 @@ package client // import "go.microcore.dev/framework/db/postgres/client"
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 )
 
 type config struct {
@@ -21,7 +23,18 @@ var logger = log.New(pkg)
 func New(opts ...Option) (*gorm.DB, error) {
 	config := &config{
 		postgres: postgres.Config{},
-		gorm:     &gorm.Config{},
+		gorm: &gorm.Config{
+			Logger: gormLogger.NewSlogLogger(
+				logger,
+				gormLogger.Config{
+					SlowThreshold: 200 * time.Millisecond,
+					Colorful: false,
+					IgnoreRecordNotFoundError: true,
+					ParameterizedQueries: true,
+					LogLevel: gormLogger.Warn,
+				},
+			),
+		},
 	}
 
 	for _, opt := range opts {
