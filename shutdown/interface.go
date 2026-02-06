@@ -13,6 +13,5 @@ type Manager interface {
 	Wait() int
 	Shutdown(code int)
 	Exit(code int) int
-	Recover()
 	SetShutdownTimeout(t time.Duration)
 }

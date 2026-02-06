@@ -183,17 +183,6 @@ func (m *manager) Exit(code int) int {
 	return m.Wait()
 }
 
-func (m *manager) Recover() {
-	if r := recover(); r != nil {
-		logger.Error(
-			"panic",
-			slog.Any("error", r),
-			slog.String("stack", string(debug.Stack())),
-		)
-		m.Exit(ExitPanic)
-	}
-}
-
 func (m *manager) SetShutdownTimeout(t time.Duration) {
 	timeout = t
 }
@@ -576,7 +565,14 @@ func Exit(code int) int {
 //	    runServer()
 //	}
 func Recover() {
-	def().Recover()
+	if r := recover(); r != nil {
+		logger.Error(
+			"panic",
+			slog.Any("error", r),
+			slog.String("stack", string(debug.Stack())),
+		)
+		os.Exit(Exit(ExitPanic))
+	}
 }
 
 // SetShutdownTimeout sets the maximum duration allowed for shutdown handlers to complete.

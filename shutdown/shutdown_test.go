@@ -101,7 +101,7 @@ func TestManager_Wait_Success(t *testing.T) {
 
 	exit := make(chan int, 1)
 
-	go func (){
+	go func() {
 		exit <- m.Wait()
 	}()
 
@@ -178,8 +178,8 @@ func TestManager_Exit(t *testing.T) {
 
 	exit := make(chan int, 1)
 	expectedCode := ExitOK
-	
-	go func(){
+
+	go func() {
 		exit <- m.Exit(expectedCode)
 	}()
 
@@ -189,18 +189,6 @@ func TestManager_Exit(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("timeout")
 	}
-}
-
-func TestManager_Recover(t *testing.T) {
-	m := newManager().(*manager)
-
-	go func() {
-		defer m.Recover()
-		panic("fatal")
-	}()
-
-	code := <-m.exit
-	require.Equal(t, ExitPanic, code)
 }
 
 func TestManager_SetShutdownTimeout(t *testing.T) {
