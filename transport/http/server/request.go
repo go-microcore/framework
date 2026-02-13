@@ -10,11 +10,10 @@ import (
 	"net"
 	"strconv"
 	"strings"
-
 	"github.com/valyala/fasthttp"
 	"go.opentelemetry.io/otel/trace"
-
 	_ "go.microcore.dev/framework"
+	"go.microcore.dev/framework/transport/http"
 )
 
 type RequestContext struct {
@@ -56,8 +55,8 @@ func (c *RequestContext) WriteJson(data any) error {
 	return json.NewEncoder(c).Encode(data)
 }
 
-func (c *RequestContext) WriteJsonWithStatusCode(statusCode int, data any) error {
-	c.SetStatusCode(statusCode)
+func (c *RequestContext) WriteJsonWithStatusCode(statusCode http.StatusCode, data any) error {
+	c.SetStatusCode(int(statusCode))
 	if data == nil {
 		c.SetTraceIdHeader()
 		return nil
@@ -65,9 +64,9 @@ func (c *RequestContext) WriteJsonWithStatusCode(statusCode int, data any) error
 	return c.WriteJson(data)
 }
 
-func (c *RequestContext) WriteStatusCode(code int) {
+func (c *RequestContext) WriteStatusCode(code http.StatusCode) {
 	c.SetTraceIdHeader()
-	c.SetStatusCode(code)
+	c.SetStatusCode(int(code))
 }
 
 func (c *RequestContext) ReadJsonBody(data any) error {
