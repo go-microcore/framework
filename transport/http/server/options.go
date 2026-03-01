@@ -12,7 +12,7 @@ import (
 	
 
 	_ "go.microcore.dev/framework"
-	"go.microcore.dev/framework/errors"
+	"go.microcore.dev/framework/transport"
 	"go.microcore.dev/framework/telemetry"
 	"go.microcore.dev/framework/transport/http/server/core"
 	"go.microcore.dev/framework/transport/http/server/listener"
@@ -129,7 +129,7 @@ func WithRouteBodyParserHandler[T any](handler func(context.Context, *RequestCon
 					}
 				}
 			} else {
-				c.WriteError(errors.ErrUnsupportedMediaType)
+				c.WriteError(transport.ErrUnsupportedMediaType)
 				return
 			}
 

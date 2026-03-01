@@ -10,19 +10,33 @@ import (
 	"net"
 	"strconv"
 	"strings"
+
 	"github.com/valyala/fasthttp"
-	"go.opentelemetry.io/otel/trace"
 	_ "go.microcore.dev/framework"
+	"go.microcore.dev/framework/transport"
 	"go.microcore.dev/framework/transport/http"
+	"go.opentelemetry.io/otel/trace"
 )
 
-type RequestContext struct {
-	*fasthttp.RequestCtx
-}
+type (
+	RequestContext struct {
+		*fasthttp.RequestCtx
+	}
+
+	ErrResponse struct {
+		Message string `json:"message"`
+		Code    string `json:"code"`
+	}
+)
 
 func (c *RequestContext) Write(p []byte) (int, error) {
 	c.SetTraceIdHeader()
 	return c.RequestCtx.Write(p)
+}
+
+func (c *RequestContext) WriteWithStatusCode(statusCode http.StatusCode, p []byte) (int, error) {
+	c.SetStatusCode(int(statusCode))
+	return c.Write(p)
 }
 
 func (c *RequestContext) WriteString(s string) (int, error) {
@@ -30,23 +44,39 @@ func (c *RequestContext) WriteString(s string) (int, error) {
 	return c.RequestCtx.WriteString(s)
 }
 
+func (c *RequestContext) WriteStringWithStatusCode(statusCode http.StatusCode, s string) (int, error) {
+	c.SetStatusCode(int(statusCode))
+	return c.WriteString(s)
+}
+
 func (c *RequestContext) WriteError(err error) {
-	for e, s := range ErrorStatusCodeMap {
-		if errors.Is(err, e) {
-			c.Error(err.Error(), s)
-			c.SetTraceIdHeader()
-			return
-		}
+	c.Response.Reset()
+
+	var e transport.Error
+	if errors.As(err, &e) {
+		c.WriteJsonWithStatusCode(
+			http.ErrStatusCodeMap[e.Base],
+			ErrResponse{
+				Message: e.Error(),
+				Code:    e.GetCode(),
+			},
+		)
+		return
 	}
-	logger.Error(
-		"unhandled error",
+
+	logger.ErrorContext(
+		c.GetContext(),
+		"internal",
 		slog.Any("error", err),
 	)
-	c.Error(
-		defaultResponseError.Error(),
-		ErrorStatusCodeMap[defaultResponseError],
+
+	c.WriteJsonWithStatusCode(
+		http.ErrStatusCodeMap[defaultResponseErr],
+		ErrResponse{
+			Message: defaultResponseErr.Error(),
+			Code:    defaultResponseCode,
+		},
 	)
-	c.SetTraceIdHeader()
 }
 
 func (c *RequestContext) WriteJson(data any) error {
@@ -64,7 +94,7 @@ func (c *RequestContext) WriteJsonWithStatusCode(statusCode http.StatusCode, dat
 	return c.WriteJson(data)
 }
 
-func (c *RequestContext) WriteStatusCode(code http.StatusCode) {
+func (c *RequestContext) StatusCode(code http.StatusCode) {
 	c.SetTraceIdHeader()
 	c.SetStatusCode(int(code))
 }
@@ -140,19 +170,19 @@ func (c *RequestContext) UserValueStrBase64(key any) (string, error) {
 	}
 
 	decoders := []*base64.Encoding{
-        base64.RawURLEncoding,
-        base64.URLEncoding,
-        base64.StdEncoding,
-    }
+		base64.RawURLEncoding,
+		base64.URLEncoding,
+		base64.StdEncoding,
+	}
 
-    for _, dec := range decoders {
-        decoded, err := dec.DecodeString(encoded)
-        if err == nil {
-            return string(decoded), nil
-        }
-    }
+	for _, dec := range decoders {
+		decoded, err := dec.DecodeString(encoded)
+		if err == nil {
+			return string(decoded), nil
+		}
+	}
 
-    return "", fmt.Errorf("failed to decode Base64 for key %v", key)
+	return "", fmt.Errorf("failed to decode Base64 for key %v", key)
 }
 
 func (c *RequestContext) UserValueInt(key any) (int, error) {

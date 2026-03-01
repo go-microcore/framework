@@ -1,4 +1,4 @@
-package http
+package http // import "go.microcore.dev/framework/transport/http"
 
 import (
 	_ "go.microcore.dev/framework"

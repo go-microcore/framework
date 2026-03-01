@@ -1,4 +1,4 @@
-package errors
+package transport
 
 import (
 	"errors"
@@ -7,13 +7,41 @@ import (
 	_ "go.microcore.dev/framework"
 )
 
+type (
+	Error struct {
+		Base error
+		Err  error
+		Code string
+	}
+)
+
+func NewError(base error, message string, code string) error {
+	return Error{
+		Base: base,
+		Err:  errors.New(message),
+		Code: code,
+	}
+}
+
+func (e Error) Error() string {
+	return fmt.Sprintf("%v: %v", e.Base, e.Err)
+}
+
+func (e Error) Unwrap() error {
+	return e.Base
+}
+
+func (e Error) GetCode() string {
+	return e.Code
+}
+
 var (
 	// Client errors — issues caused by the client's request
 
 	// The request was invalid or malformed, meaning the server could not
 	// understand it due to incorrect syntax, missing fields, or invalid
 	// parameters.
-	ErrBadRequest error = errors.New("bad_request")
+	ErrBadRequest error = errors.New("bad request")
 
 	// The client is not authenticated. This occurs when a request
 	// requires authentication but the client did not provide valid
@@ -23,7 +51,7 @@ var (
 	// Payment is required to access the resource. This is used when
 	// access to the requested resource requires a payment, license,
 	// or subscription.
-	ErrPaymentRequired error = errors.New("payment_required")
+	ErrPaymentRequired error = errors.New("payment required")
 
 	// The client does not have permission to access the resource, even
 	// if authenticated. This happens when the user lacks the necessary
@@ -33,11 +61,11 @@ var (
 	// The requested resource could not be found on the server. This
 	// indicates that the URL is valid but the resource does not exist
 	// or has been removed.
-	ErrNotFound error = errors.New("not_found")
+	ErrNotFound error = errors.New("not found")
 
 	// The request method is not allowed for the specified resource.
 	// This occurs when, for example, POST is used on a read-only endpoint.
-	ErrMethodNotAllowed error = errors.New("method_not_allowed")
+	ErrMethodNotAllowed error = errors.New("method not allowed")
 
 	// There is a conflict with the current state of the resource,
 	// such as attempting to create a resource that already exists
@@ -51,15 +79,15 @@ var (
 
 	// The request entity is too large for the server to process.
 	// This happens when the client sends a payload exceeding server limits.
-	ErrRequestEntityTooLarge error = errors.New("request_entity_too_large")
+	ErrRequestEntityTooLarge error = errors.New("request entity too large")
 
 	// The media type of the request is not supported by the server.
 	// For example, sending XML to an endpoint that only accepts JSON.
-	ErrUnsupportedMediaType error = errors.New("unsupported_media_type")
+	ErrUnsupportedMediaType error = errors.New("unsupported media type")
 
 	// The requested range of data cannot be satisfied. This occurs when
 	// a client requests a portion of a resource that is invalid or unavailable.
-	ErrRequestedRangeNotSatisfiable error = errors.New("requested_range_not_satisfiable")
+	ErrRequestedRangeNotSatisfiable error = errors.New("requested range not satisfiable")
 
 	// The server refuses to brew coffee as a teapot. This is a humorous
 	// RFC-defined response, rarely used in real applications.
@@ -68,7 +96,7 @@ var (
 	// The server cannot process the request due to semantic errors.
 	// The request is well-formed but contains logical errors that prevent
 	// it from being processed.
-	ErrUnprocessableEntity error = errors.New("unprocessable_entity")
+	ErrUnprocessableEntity error = errors.New("unprocessable entity")
 
 	// The resource is currently locked and cannot be accessed. This usually
 	// occurs when another process holds an exclusive lock on the resource.
@@ -77,51 +105,47 @@ var (
 	// A dependent operation failed, preventing the current operation from
 	// completing successfully. Often used in systems with multi-step
 	// transactions or workflows.
-	ErrFailedDependency error = errors.New("failed_dependency")
+	ErrFailedDependency error = errors.New("failed dependency")
 
 	// The request requires a precondition to be met, such as an expected
 	// version or ETag. This prevents operations that would conflict with
 	// concurrent changes.
-	ErrPreconditionRequired error = errors.New("precondition_required")
+	ErrPreconditionRequired error = errors.New("precondition required")
 
 	// The client has sent too many requests in a given time frame.
 	// This is used to implement rate limiting or prevent abuse.
-	ErrTooManyRequests error = errors.New("too_many_requests")
+	ErrTooManyRequests error = errors.New("too many requests")
 
 	// The resource is unavailable due to legal or regulatory reasons.
 	// Access is blocked by government or court orders.
-	ErrUnavailableForLegalReasons error = errors.New("unavailable_for_legal_reasons")
+	ErrUnavailableForLegalReasons error = errors.New("unavailable for legal reasons")
 
 	// Server errors — issues caused by server failure or unavailability
 
 	// The server encountered an unexpected condition that prevented it from
 	// fulfilling the request. Usually indicates a bug or misconfiguration.
-	ErrInternalServerError error = errors.New("internal_server_error")
+	ErrInternalServerError error = errors.New("internal server error")
 
 	// The server does not support the requested functionality. This
 	// indicates that the requested method or endpoint has not been
 	// implemented.
-	ErrNotImplemented error = errors.New("not_implemented")
+	ErrNotImplemented error = errors.New("not implemented")
 
 	// The server received an invalid response from an upstream server
 	// or gateway while acting as a proxy. Usually indicates issues in
 	// downstream services.
-	ErrBadGateway error = errors.New("bad_gateway")
+	ErrBadGateway error = errors.New("bad gateway")
 
 	// The server is temporarily unable to handle the request due to
 	// overload, maintenance, or downtime. The condition may resolve
 	// after some time.
-	ErrServiceUnavailable error = errors.New("service_unavailable")
+	ErrServiceUnavailable error = errors.New("service unavailable")
 
 	// The server did not receive a timely response from an upstream
 	// server or dependency while acting as a gateway or proxy.
-	ErrGatewayTimeout error = errors.New("gateway_timeout")
+	ErrGatewayTimeout error = errors.New("gateway timeout")
 
 	// A loop was detected in processing the request, often due to
 	// misconfigured routing, redirects, or recursive dependencies.
-	ErrLoopDetected error = errors.New("loop_detected")
+	ErrLoopDetected error = errors.New("loop detected")
 )
-
-func New(base error, message string) error {
-	return fmt.Errorf("%w:%s", base, message)
-}

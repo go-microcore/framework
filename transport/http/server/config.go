@@ -6,7 +6,7 @@ import (
 	"github.com/valyala/fasthttp"
 
 	_ "go.microcore.dev/framework"
-	"go.microcore.dev/framework/errors"
+	"go.microcore.dev/framework/transport"
 	"go.microcore.dev/framework/transport/http"
 )
 
@@ -25,7 +25,8 @@ const (
 )
 
 var (
-	defaultResponseError = errors.ErrServiceUnavailable
+	defaultResponseErr  = transport.ErrServiceUnavailable
+	defaultResponseCode = "SERVICE_UNAVAILABLE"
 )
 
 func defaultRouteHandler(c *RequestContext) {

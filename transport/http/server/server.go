@@ -2,10 +2,11 @@ package server // import "go.microcore.dev/framework/transport/http/server"
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net"
 	"time"
-	"fmt"
 
 	_ "go.microcore.dev/framework"
 	"go.microcore.dev/framework/log"
@@ -157,12 +158,6 @@ func (s *server) SetTelemetryManager(telemetry telemetry.Manager) Manager {
 				c.SetUserValue("ctx", ctx)
 
 				defer func() {
-					if rec := recover(); rec != nil {
-						span.RecordError(fmt.Errorf("panic: %v", rec))
-						span.SetStatus(codes.Error, fmt.Sprintf("panic: %v", rec))
-						panic(rec)
-					}
-
 					duration := time.Since(start).Seconds()
 					statusCode := c.Response.StatusCode()
 
@@ -173,13 +168,27 @@ func (s *server) SetTelemetryManager(telemetry telemetry.Manager) Manager {
 						attribute.Float64("duration", duration),
 					)
 
+					if rec := recover(); rec != nil {
+						span.RecordError(fmt.Errorf("%v", rec))
+						span.SetStatus(codes.Error, "panic")
+						panic(rec)
+					}
+
 					switch {
-					case statusCode >= 500:
-						span.SetStatus(codes.Error, fmt.Sprintf("Server error: HTTP %d", statusCode))
 					case statusCode >= 400:
-						span.SetStatus(codes.Error, fmt.Sprintf("Client error: HTTP %d", statusCode))
+						var (
+							body    ErrResponse
+							message string
+						)
+						if err := json.Unmarshal(c.Response.Body(), &body); err != nil {
+							span.RecordError(err)
+							message = string(c.Response.Body())
+						} else {
+							message = body.Message
+						}
+						span.SetStatus(codes.Error, message)
 					default:
-						span.SetStatus(codes.Ok, fmt.Sprintf("HTTP %d", statusCode))
+						span.SetStatus(codes.Ok, "")
 					}
 				}()
 

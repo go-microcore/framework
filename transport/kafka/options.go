@@ -7,8 +7,8 @@ import (
 
 	"github.com/segmentio/kafka-go"
 	_ "go.microcore.dev/framework"
-	"go.microcore.dev/framework/errors"
 	"go.microcore.dev/framework/telemetry"
+	"go.microcore.dev/framework/transport"
 )
 
 type Option func(*k)
@@ -135,7 +135,7 @@ func WithSubPayloadParserHandler[T any](handler func(ctx context.Context, messag
 					}
 				}
 			} else {
-				return errors.ErrUnsupportedMediaType
+				return transport.ErrUnsupportedMediaType
 			}
 			return handler(ctx, message, &payload)
 		}
