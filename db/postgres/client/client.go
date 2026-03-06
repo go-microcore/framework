@@ -27,11 +27,13 @@ func New(opts ...Option) (*gorm.DB, error) {
 			Logger: gormLogger.NewSlogLogger(
 				logger,
 				gormLogger.Config{
-					SlowThreshold: 200 * time.Millisecond,
-					Colorful: false,
+					SlowThreshold:             200 * time.Millisecond,
+					Colorful:                  false,
 					IgnoreRecordNotFoundError: true,
-					ParameterizedQueries: true,
-					LogLevel: gormLogger.Warn,
+					ParameterizedQueries:      true,
+					// LogLevel is set to Silent to prevent redundant output, as errors are already
+					// handled at the application level. Will be made configurable in future versions.
+					LogLevel: gormLogger.Silent,
 				},
 			),
 		},
