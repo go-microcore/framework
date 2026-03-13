@@ -9,11 +9,9 @@ import (
 	fasthttpRouter "github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 
-	
-
 	_ "go.microcore.dev/framework"
-	"go.microcore.dev/framework/transport"
 	"go.microcore.dev/framework/telemetry"
+	"go.microcore.dev/framework/transport"
 	"go.microcore.dev/framework/transport/http/server/core"
 	"go.microcore.dev/framework/transport/http/server/listener"
 	"go.microcore.dev/framework/transport/http/server/router"
@@ -129,7 +127,13 @@ func WithRouteBodyParserHandler[T any](handler func(context.Context, *RequestCon
 					}
 				}
 			} else {
-				c.WriteError(transport.ErrUnsupportedMediaType)
+				c.WriteError(
+					transport.NewError(
+						transport.ErrUnsupportedMediaType,
+						"invalid json body",
+						"INVALID_JSON_BODY",
+					),
+				)
 				return
 			}
 

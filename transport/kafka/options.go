@@ -135,7 +135,11 @@ func WithSubPayloadParserHandler[T any](handler func(ctx context.Context, messag
 					}
 				}
 			} else {
-				return transport.ErrUnsupportedMediaType
+				return transport.NewError(
+					transport.ErrUnsupportedMediaType,
+					"invalid json message",
+					"INVALID_JSON_MESSAGE",
+				)
 			}
 			return handler(ctx, message, &payload)
 		}
